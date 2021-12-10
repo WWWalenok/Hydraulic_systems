@@ -162,7 +162,7 @@ struct DoubleActingHydraulicDrive_NoDp
 		;
 	// обратный цилиндр
 	double
-		S2 = 0.05
+		S2 = 0.1
 		;
 	// Свойства рабочей жидкости
 	double
