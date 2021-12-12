@@ -5,12 +5,12 @@
 template<unsigned char Size>
 struct RKSolver
 {
-	static double BaseFunction(double* A)
+	static double BaseFunction(double* A, void* B)
 	{
 		return 1;
 	}
 
-	typedef double (*FuncPtr)(double*);
+	typedef double (*FuncPtr)(double*, void*);
 
 	FuncPtr funcs[Size];
 
@@ -30,7 +30,7 @@ struct RKSolver
 		}
 	}
 
-	void Calc()
+	void Calc(void* _t)
 	{
 		double K[Size][4];
 		double select[Size + 1];
@@ -40,7 +40,7 @@ struct RKSolver
 			select[i] = State[i];
 
 		for (int i = 0; i < Size; i++)
-			K[i][0] = h * funcs[i](select);
+			K[i][0] = h * funcs[i](select, _t);
 
 		// K2
 		select[0] = State[0] + h * 0.5;
@@ -48,7 +48,7 @@ struct RKSolver
 			select[i] = State[i] + K[i - 1][0] * 0.5;
 
 		for (int i = 0; i < Size; i++)
-			K[i][1] = h * funcs[i](select);
+			K[i][1] = h * funcs[i](select, _t);
 
 		// K3
 		select[0] = State[0] + h * 0.5;
@@ -56,7 +56,7 @@ struct RKSolver
 			select[i] = State[i] + K[i - 1][1] * 0.5;
 
 		for (int i = 0; i < Size; i++)
-			K[i][2] = h * funcs[i](select);
+			K[i][2] = h * funcs[i](select, _t);
 
 		// K4
 		select[0] = State[0] + h;
@@ -64,7 +64,7 @@ struct RKSolver
 			select[i] = State[i] + K[i - 1][2];
 
 		for (int i = 0; i < Size; i++)
-			K[i][3] = h * funcs[i](select);
+			K[i][3] = h * funcs[i](select, _t);
 
 		State[0] = State[0] + h;
 		for (int i = 1; i < Size + 1; i++)
