@@ -31,17 +31,17 @@ struct H_System
 	// Свойства рабочей жидкости
 	double
 		ro = 860,
-		E = 1.56E6
+		E = 1.56E7
 		;
 	// Харрактеристики дроссилей
 	double
 		mu = 0.62,
-		S = 0.02
+		S = 0.03
 		;
 	// Харрактеристики системы
 	double
 		min_x = 0,
-		max_x = 2,
+		max_x = 1,
 		m = 2,
 		b_prop = 5,
 		p_s = 0,
@@ -53,7 +53,7 @@ struct H_System
 		;
 	// Геометрия
 	double
-		A[2]{ 1,-2 },
+		A[2]{ 1,-1 },
 		B[2]{ 0,0 },
 		H[2]
 	{
@@ -61,14 +61,14 @@ struct H_System
 		A[1] - B[1],
 	},
 	h = sqrt(H[0] * H[0] + H[1] * H[1]),
-	l =  1.5,
+	l =  0.5,
 	d = 1,
-	dh = 0,
+	dh = 2,
 	dd = 2,
 	Ft[2]
 	{
 		+0,
-		-m * G
+		-2 * G
 	},
 		Fn
 		;
@@ -231,7 +231,7 @@ struct H_System
 
 	H_System()
 	{
-		solver.funcs[0] = &H_System::DV;
+		solver.funcs[0] = DV;
 		solver.funcs[1] = DX;
 		solver.funcs[2] = DP1;
 		solver.funcs[3] = DP2;
@@ -260,7 +260,7 @@ void main()
 
 	H_System HD;
 
-	HD.solver.h = 0.002;
+	HD.solver.h = 0.0001;
 	HD.F(HD.solver.State, &HD);
 	double ba = acos(HD.cosa);
 	std::ofstream Out("out.txt");
@@ -272,12 +272,45 @@ void main()
 		v,
 		p1,
 		p2,
-		n;
+		n,
+		us;
 
-	for (int i = 0; i < 10000; i++)
+	float
+		k_p = 100,
+		k_d = 0,
+		k_i = 0,
+		target = 0.5,
+		dU = 10;
+	float U = 0, OU = 0;
+	for (int i = 0; i < 60000; i++)
 	{
+		U = HD.solver.State[1] * k_d + (target - HD.solver.State[2]) * k_p;
+
+		U = fmin(fmax(-1, U), 1);
+
+		if (fabs(OU - U) > dU * HD.solver.h)
+		{
+			U = OU + ((U - OU) > 0 ? dU * HD.solver.h : -dU * HD.solver.h);
+		}
+		OU = U;
+		float TU = U;
+
+		const float deadZone = 0.01;
+
+		if (fabs(TU) < deadZone)
+		{
+			TU = 0;
+		}
+		else
+		{
+			TU = TU - (TU > 0 ? deadZone : -deadZone);
+			TU /= 1 - deadZone;
+		}
+
+		HD.U = TU;
+
 		HD.F(HD.solver.State, &HD);
-		if (i % 10 == 0)
+		if (i % 30 == 0)
 		{
 			t.push_back(HD.solver.State[0]);
 			x.push_back(HD.solver.State[2]);
@@ -285,6 +318,7 @@ void main()
 			p1.push_back(HD.solver.State[3]);
 			p2.push_back(HD.solver.State[4]);
 			n.push_back(HD.Fn);
+			us.push_back(TU);
 			Out
 				<< HD.solver.State[0] << "\t"
 				<< HD.solver.State[1] << "\t"
@@ -292,7 +326,8 @@ void main()
 				<< HD.solver.State[3] * HD.S1 << "\t"
 				<< HD.solver.State[4] * HD.S2 << "\t"
 				<< HD.Fn << "\t"
-				<< (acos(HD.cosa) - ba) * 180 / PI << '\n';
+				<< (acos(HD.cosa) - ba) * 180 / PI << '\t'
+				<< TU << "\n";
 		}
 		HD.solver.Calc(&HD);
 		
@@ -318,25 +353,38 @@ void main()
 		Y,
 		S_X,
 		S_V,
+		S_V0,
 		S_P1,
 		S_P2,
-		S_N
+		S_N,
+		S_T
 		;
 
 	X.Set(new sf::Vertex[2], 2);
 	Y.Set(new sf::Vertex[2], 2);
+	S_V0.Set(new sf::Vertex[2], 2);
 	S_P1.Set(new sf::Vertex[t.size()], t.size());
 	S_P2.Set(new sf::Vertex[t.size()], t.size());
 	S_N.Set(new sf::Vertex[t.size()], t.size());
+	S_X.Set(new sf::Vertex[t.size()], t.size());
+	S_T.Set(new sf::Vertex[t.size()], t.size());
+	S_V.Set(new sf::Vertex[t.size()], t.size());
 
 	X.SetColor(sf::Color::White);
 	Y.SetColor(sf::Color::White);
 	S_P1.SetColor(sf::Color::Red);
 	S_P2.SetColor(sf::Color::Blue);
 	S_N.SetColor(sf::Color::Green);
+	S_X.SetColor(sf::Color::Red);
+	S_T.SetColor(sf::Color::Green);
+	S_V.SetColor(sf::Color::Green);
+	S_V0.SetColor(sf::Color::Red);
 
 	X[0].position = { float(10), float(W - 10) };
 	X[1].position = { float(H - 10), float(W - 10) };
+
+	S_V0[0].position = { float(10), float(W - 10) };
+	S_V0[1].position = { float(H - 10), float(W - 10) };
 
 	Y[0].position = { float(10), float(W - 10) };
 	Y[1].position = { float(10), float(10) };
@@ -344,12 +392,20 @@ void main()
 	double Y_min = 1e20;
 	double Y_max = -1e20;
 
+	double
+		Vmin = 1e20,
+		Vmax = -1e20;
+
+	int Mode = 1;
+
 	for (int i = 0; i < t.size(); i++)
 	{
 		S_N[i].position = { float(10 + i * (H - 20) / float(t.size() - 1.0)), float(W * 0.5) };
-		S_P1[i].position.x = S_P2[i].position.x = S_N[i].position.x;
+		S_V[i].position.x = S_T[i].position.x = S_X[i].position.x = S_P1[i].position.x = S_P2[i].position.x = S_N[i].position.x;
 		Y_min = std::min(p1[i], std::min(p2[i], std::min(n[i], Y_min)));
 		Y_max = std::max(p1[i], std::max(p2[i], std::max(n[i], Y_max)));
+		Vmin = std::min(v[i], Vmin);
+		Vmax = std::max(v[i], Vmax);
 	}
 
 	for (int i = 0; i < t.size(); i++)
@@ -358,6 +414,19 @@ void main()
 		S_P1[i].position.y = W - 10 - (W - 20) * ((p1[i] - Y_min) / (Y_max - Y_min));
 		S_P2[i].position.y = W - 10 - (W - 20) * ((p2[i] - Y_min) / (Y_max - Y_min));
 	}
+
+	for (int i = 0; i < t.size(); i++)
+	{
+		S_X[i].position.y = W - 10 - (W - 20) * ((x[i] - HD.min_x) / (HD.max_x - HD.min_x));
+		S_T[i].position.y = W - 10 - (W - 20) * ((target - HD.min_x) / (HD.max_x - HD.min_x));
+	}
+
+	for (int i = 0; i < t.size(); i++)
+	{
+		S_V[i].position.y = W - 10 - (W - 20) * ((v[i] - Vmin) / (Vmax - Vmin));
+	}
+
+	S_V0[1].position.y = S_V0[0].position.y = W - 10 - (W - 20) * ((0 - Vmin) / (Vmax - Vmin));
 
 	while (window.isOpen())
 	{
@@ -369,12 +438,26 @@ void main()
 		}
 
 		window.clear();
-		//window.draw(shape);
+
 		window.draw(X);
 		window.draw(Y);
-		window.draw(S_N);
-		window.draw(S_P1);
-		window.draw(S_P2);
+
+		switch (Mode)
+		{
+		case 0:
+			window.draw(S_V);
+			window.draw(S_V0);
+
+			break;
+		case 1:
+			window.draw(S_T);
+			window.draw(S_X);
+
+			break;
+		default:
+			break;
+		}
+
 		window.display();
 	}
 
