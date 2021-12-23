@@ -1,4 +1,5 @@
 ﻿#include <iostream>
+#include <iomanip>  
 #include <SFML/Graphics.hpp>
 #include<thread>
 #include<time.h>
@@ -25,27 +26,27 @@ struct H_System
 		;
 	// обратный цилиндр
 	double
-		V2 = 0.05,
+		V2 = 0.1,
 		S2 = 0.1
 		;
 	// Свойства рабочей жидкости
 	double
 		ro = 860,
-		E = 1.56E7
+		E = 1.56E6
 		;
 	// Харрактеристики дроссилей
 	double
 		mu = 0.62,
-		S = 0.03
+		S = 0.01
 		;
 	// Харрактеристики системы
 	double
 		min_x = 0,
 		max_x = 1,
-		m = 2,
+		m = 10,
 		b_prop = 5,
 		p_s = 0,
-		p_i = 2000
+		p_i = 1000
 		;
 	// Управляющий сигнал
 	double
@@ -63,12 +64,12 @@ struct H_System
 	h = sqrt(H[0] * H[0] + H[1] * H[1]),
 	l =  0.5,
 	d = 1,
-	dh = 2,
-	dd = 2,
+	dh = 0,
+	dd = 0,
 	Ft[2]
 	{
 		+0,
-		-2 * G
+		-5
 	},
 		Fn
 		;
@@ -260,12 +261,23 @@ void main()
 
 	H_System HD;
 
-	HD.solver.h = 0.0001;
+	HD.solver.h = 0.0000001;
 	HD.F(HD.solver.State, &HD);
 	double ba = acos(HD.cosa);
 	std::ofstream Out("out.txt");
 	Out << std::scientific;
-
+	Out << std::setprecision(10);
+	Out
+		<< "T" << ","
+		<< "V" << ","
+		<< "X" << ","
+		<< "P1" << ","
+		<< "P2" << ","
+		<< "F" << ","
+		<< "A" << ","
+		<< "U" << ","
+		<< "CU" << ","
+		<< "DT" << "\n";
 	std::vector<double>
 		t,
 		x,
@@ -276,15 +288,32 @@ void main()
 		us;
 
 	float
-		k_p = 100,
+		k_p = 150,
 		k_d = 0,
 		k_i = 0,
 		target = 0.5,
 		dU = 10;
 	float U = 0, OU = 0;
-	for (int i = 0; i < 60000; i++)
+
+	float 
+		dt = 0.001,
+		ot = -dt * 2;
+
+	float maxTime = 100;
+
+	int j = 0;
+
+	float I = 0, BI = 0;
+
+	for (int i = 0; HD.solver.State[0] < 100; i++)
 	{
-		U = HD.solver.State[1] * k_d + (target - HD.solver.State[2]) * k_p;
+
+		const float deadZone = 0.01;
+		if (i % 1 == 0)
+			HD.solver.UpateH(&HD, HD.solver.h * 2, 1e-12);
+		U = HD.solver.State[1] * k_d + (target - HD.solver.State[2]) * k_p + I * k_i;
+		if (fabs(target - HD.solver.State[2]) < 1e-7)
+			U = 0;
 
 		U = fmin(fmax(-1, U), 1);
 
@@ -295,8 +324,9 @@ void main()
 		OU = U;
 		float TU = U;
 
-		const float deadZone = 0.01;
-
+		I = I + (fabs(target - HD.solver.State[2]) < 1e-3 ? (target - HD.solver.State[2]) * HD.solver.h : 0);
+		if (I * (target - HD.solver.State[2]) < 0)
+			I *= .99;
 		if (fabs(TU) < deadZone)
 		{
 			TU = 0;
@@ -310,8 +340,11 @@ void main()
 		HD.U = TU;
 
 		HD.F(HD.solver.State, &HD);
-		if (i % 30 == 0)
+		if (HD.solver.State[0] - ot >= dt)
 		{
+			
+			while (HD.solver.State[0] - ot >= dt)
+				ot += dt;
 			t.push_back(HD.solver.State[0]);
 			x.push_back(HD.solver.State[2]);
 			v.push_back(HD.solver.State[1]);
@@ -320,14 +353,29 @@ void main()
 			n.push_back(HD.Fn);
 			us.push_back(TU);
 			Out
-				<< HD.solver.State[0] << "\t"
-				<< HD.solver.State[1] << "\t"
-				<< HD.solver.State[2] << "\t"
-				<< HD.solver.State[3] * HD.S1 << "\t"
-				<< HD.solver.State[4] * HD.S2 << "\t"
-				<< HD.Fn << "\t"
-				<< (acos(HD.cosa) - ba) * 180 / PI << '\t'
-				<< TU << "\n";
+				<< HD.solver.State[0] << ","
+				<< HD.solver.State[1] << ","
+				<< HD.solver.State[2] << ","
+				<< HD.solver.State[3] * HD.S1 << ","
+				<< HD.solver.State[4] * HD.S2 << ","
+				<< HD.Fn << ","
+				<< (acos(HD.cosa) - ba) * 180 / PI << ","
+				<< TU << ","
+				<< I << ","
+				<< HD.solver.h << "\n";;
+			if(HD.solver.State[0] > 1)
+				if(fabs(v[x.size() - 1]) < 1E-7 && fabs(v[x.size() - 2]) < 1E-7)
+				{
+					//break;
+				}
+
+			if (j % 100 == 0)
+			{
+				for (int i = 0; i < 20; i++)
+					std::cout << (i / 20.0 > HD.solver.State[0] / maxTime ? "_" : "X");
+				std::cout << '\r';
+			}
+			j++;
 		}
 		HD.solver.Calc(&HD);
 		
@@ -337,10 +385,10 @@ void main()
 		if (_x < HD.min_x)
 			_x = HD.min_x;
 	}
-
+	std::cout << '\n';
 	Out.flush();
 	Out.close();
-
+	return;
 	uint32_t H = 800, W = 400;
 
 	sf::ContextSettings context_setting(0, 0, 2);

@@ -1,6 +1,6 @@
 #pragma once
 
-
+#define MAX2(a,b) (a > b ? a : b)
 
 template<unsigned char Size>
 struct RKSolver
@@ -71,6 +71,51 @@ struct RKSolver
 		{
 			State[i] = State[i] + (K[i - 1][0] + 2 * K[i - 1][1] + 2 * K[i - 1][2] + K[i - 1][3]) / 6.0;
 		}
+	}
+
+	void UpateH(void* _t, float bh = 1, float eps = 1e-7)
+	{
+		double OState[Size + 1];
+		double State1[Size + 1];
+		double State2[Size + 1];
+
+		for (int i = 0; i < Size + 1; i++)
+			OState[i] = State[i];
+		h = bh;
+		float err = eps * 2;
+		double oh = h;
+		while (err > eps)
+		{
+			oh = h;
+			err = 0;
+
+			Calc(_t);
+
+			for (int i = 0; i < Size + 1; i++)
+				State1[i] = State[i];
+
+			for (int i = 0; i < Size + 1; i++)
+				State[i] = OState[i];
+
+			h = h * 0.5;
+
+			Calc(_t);
+			Calc(_t);
+
+			for (int i = 0; i < Size + 1; i++)
+				State2[i] = State[i];
+
+			for (int i = 0; i < Size + 1; i++)
+				State[i] = OState[i];
+			
+			for (int i = 1; i < Size + 1; i++)
+			{
+				err = MAX2(err, fabs(State1[i] - State2[i]));
+			}
+		}
+
+		h = oh;
+
 	}
 
 };
