@@ -32,7 +32,7 @@ struct H_System
 	// Свойства рабочей жидкости
 	double
 		ro = 860,
-		E = 1.56E6
+		E = 1.56E7
 		;
 	// Харрактеристики дроссилей
 	double
@@ -45,6 +45,7 @@ struct H_System
 		max_x = 1,
 		m = 10,
 		b_prop = 5,
+		f_tr_suh = 0.001,
 		p_s = 0,
 		p_i = 1000
 		;
@@ -147,7 +148,9 @@ struct H_System
 
 		H_System* T = (H_System*)(_t);
 
-		double ret = (T->S1 * p1 - T->S2 * p2 - T->b_prop * v + F(var, _t)) / T->m;
+		double ret = (T->S1 * p1 - T->S2 * p2 - T->b_prop * v + F(var, _t));
+
+		double F_tr = -sign(v) * T->f_tr_suh;
 
 		return ret;
 	}
@@ -254,6 +257,15 @@ struct H_System
 
 	}
 
+	void Calc()
+	{
+		solver.Calc(this);
+
+		if (fabs(solver.State[1]) / solver.h < f_tr_suh / m)
+			solver.State[1] = 0;
+
+	}
+
 };
 
 void main()
@@ -261,12 +273,12 @@ void main()
 
 	H_System HD;
 
-	HD.solver.h = 0.0000001;
+	HD.solver.h = 0.00001;
 	HD.F(HD.solver.State, &HD);
 	double ba = acos(HD.cosa);
 	std::ofstream Out("out.txt");
 	Out << std::scientific;
-	Out << std::setprecision(10);
+	Out << std::setprecision(20);
 	Out
 		<< "T" << ","
 		<< "V" << ","
@@ -293,24 +305,32 @@ void main()
 		k_i = 0,
 		target = 0.5,
 		dU = 10;
-	float U = 0, OU = 0;
+	const float deadZone = 0.01;
+	float U = deadZone * 2, OU = deadZone * 2;
 
 	float 
 		dt = 0.001,
 		ot = -dt * 2;
 
-	float maxTime = 100;
+	float maxTime = 50;
 
 	int j = 0;
 
 	float I = 0, BI = 0;
 
-	for (int i = 0; HD.solver.State[0] < 100; i++)
+	double mh = HD.solver.h;
+
+	for (int i = 0; HD.solver.State[0] < maxTime; i++)
 	{
 
-		const float deadZone = 0.01;
-		if (i % 1 == 0)
-			HD.solver.UpateH(&HD, HD.solver.h * 2, 1e-12);
+
+		double oh = HD.solver.h;
+		if (i % 10 == 0)
+		{
+			HD.solver.UpateH(&HD, MAX2(mh, HD.solver.h) * 4, 1e-12);
+			mh = mh * 0.99 + HD.solver.h * 0.01;
+			HD.solver.h = MIN2(mh, HD.solver.h);
+		}
 		U = HD.solver.State[1] * k_d + (target - HD.solver.State[2]) * k_p + I * k_i;
 		if (fabs(target - HD.solver.State[2]) < 1e-7)
 			U = 0;
@@ -361,23 +381,23 @@ void main()
 				<< HD.Fn << ","
 				<< (acos(HD.cosa) - ba) * 180 / PI << ","
 				<< TU << ","
-				<< I << ","
+				<< U << ","
 				<< HD.solver.h << "\n";;
 			if(HD.solver.State[0] > 1)
-				if(fabs(v[x.size() - 1]) < 1E-7 && fabs(v[x.size() - 2]) < 1E-7)
+				if(mh > 1E-4 && fabsl(HD.solver.State[1]) < 1E-10)
 				{
 					//break;
 				}
-
+			Out.flush();
 			if (j % 100 == 0)
 			{
 				for (int i = 0; i < 20; i++)
-					std::cout << (i / 20.0 > HD.solver.State[0] / maxTime ? "_" : "X");
+					std::cout << (i / 19.0 > HD.solver.State[0] / maxTime ? "_" : "X");
 				std::cout << '\r';
 			}
 			j++;
 		}
-		HD.solver.Calc(&HD);
+		HD.Calc();
 		
 		double& _x = HD.solver.State[2];
 		if (_x > HD.max_x)

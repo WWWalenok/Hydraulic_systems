@@ -2,6 +2,8 @@
 
 #define MAX2(a,b) (a > b ? a : b)
 
+#define MIN2(a,b) (a < b ? a : b)
+
 template<unsigned char Size>
 struct RKSolver
 {
@@ -114,7 +116,7 @@ struct RKSolver
 			}
 		}
 
-		h = oh;
+		h = oh * 0.7;
 
 	}
 
