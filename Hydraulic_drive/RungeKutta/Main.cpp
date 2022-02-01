@@ -16,6 +16,30 @@ const double
 G = 9.81,
 PI = 3.1415926535;
 
+static double U_to_S(double u)
+{
+	u = 2 * u - 1;
+	u = MAX2(-1, MIN2(1, u));
+	return
+		1 - (acos(u) - u * sqrt(1 - u * u)) / PI;
+}
+
+static double U_to_S_dead_zone(double u, double dz)
+{
+
+	if (fabs(u) < dz)
+	{
+		u = 0;
+	}
+	else
+	{
+		u = u - (u > 0 ? dz : -dz);
+		u /= 1 - dz;
+	}
+
+	return U_to_S(u);
+}
+
 struct H_System
 {
 
@@ -32,7 +56,7 @@ struct H_System
 	// Свойства рабочей жидкости
 	double
 		ro = 860,
-		E = 1.56E7
+		E = 1.56E6
 		;
 	// Харрактеристики дроссилей
 	double
@@ -43,16 +67,22 @@ struct H_System
 	double
 		min_x = 0,
 		max_x = 1,
-		m = 10,
-		b_prop = 5,
-		f_tr_suh = 0.001,
+		m = 1,
+		b_prop = 0.0,
+		f_tr_suh = 1,
 		p_s = 0,
 		p_i = 1000
 		;
 	// Управляющий сигнал
 	double
-		U = 1
+		DU_max = 1,
+		target_x = 0.5,
+		U_deadZone = 0.05,
+		K_p = 10
+
 		;
+	// Допущения
+
 	// Геометрия
 	double
 		A[2]{ 1,-1 },
@@ -70,7 +100,7 @@ struct H_System
 	Ft[2]
 	{
 		+0,
-		-5
+		-0
 	},
 		Fn
 		;
@@ -147,12 +177,18 @@ struct H_System
 			& p2 = var[4];
 
 		H_System* T = (H_System*)(_t);
-
-		double ret = (T->S1 * p1 - T->S2 * p2 - T->b_prop * v + F(var, _t));
-
-		double F_tr = -sign(v) * T->f_tr_suh;
-
+		double _F = (T->S1 * p1 - T->S2 * p2 - T->b_prop * v + F(var, _t));
+		double ret = _F / T->m;
 		return ret;
+
+		if (-_F / (T->solver.h * T->m * v) > 1)
+		{			
+			if (_F * _F < T->f_tr_suh * T->f_tr_suh)
+				ret = -v * T->solver.h;
+		}
+		
+
+
 	}
 
 	static  double  DX(double* var, void* _t)
@@ -183,21 +219,19 @@ struct H_System
 			& v = var[1],
 			& x = var[2],
 			& p1 = var[3],
-			& p2 = var[4];
+			& p2 = var[4],
+			& u = var[5];
 
 		H_System* T = (H_System*)(_t);
 
-		double _S = T->S * fabs(T->U),
+		double 
+			_S = T->S * U_to_S_dead_zone(fabs(u), T->U_deadZone),
 			Q1 = 0;
 
-		if (T->U > 0)
-		{
+		if (u > 0)
 			Q1 = T->mu * _S * sign(T->p_i - p1) * sqrt(2 / T->ro * fabs(T->p_i - p1));
-		}
 		else
-		{
 			Q1 = -T->mu * _S * sign(p1 - T->p_s) * sqrt(2 / T->ro * fabs(T->p_s - p1));
-		}
 
 		double Vt1 = T->V1 + T->S1 * (x - T->min_x);
 
@@ -213,13 +247,16 @@ struct H_System
 			& v = var[1],
 			& x = var[2],
 			& p1 = var[3],
-			& p2 = var[4];
+			& p2 = var[4],
+			& u = var[5];
 
 		H_System* T = (H_System*)(_t);
-		double _S = T->S * fabs(T->U),
+
+		double 
+			_S = T->S * U_to_S_dead_zone(fabs(u), T->U_deadZone),
 			Q2 = 0;
 
-		if (T->U > 0)
+		if (u > 0)
 			Q2 = -T->mu * _S * sign(p2 - T->p_s) * sqrt(2 / T->ro * fabs(T->p_s - p2));
 		else
 			Q2 = T->mu * _S * sign(T->p_i - p2) * sqrt(2 / T->ro * fabs(T->p_i - p2));
@@ -231,7 +268,26 @@ struct H_System
 		return ret;
 	}
 
-	RKSolver<4> solver;
+	static  double  DU(double* var, void* _t)
+	{
+		double
+			& t = var[0],
+			& v = var[1],
+			& x = var[2],
+			& p1 = var[3],
+			& p2 = var[4];
+
+		H_System* T = (H_System*)(_t);
+
+		double ret = -v * T->K_p + (T->target_x - x) * 1e20;
+
+		ret = MAX2(-T->DU_max, MIN2(T->DU_max, ret));
+
+		return ret;
+	}
+
+
+	RKSolver<5> solver;
 
 	H_System()
 	{
@@ -239,8 +295,11 @@ struct H_System
 		solver.funcs[1] = DX;
 		solver.funcs[2] = DP1;
 		solver.funcs[3] = DP2;
-		solver.State[3] = (U > 0 ? p_i : p_s);
-		solver.State[4] = (U < 0 ? p_i : p_s);
+		solver.funcs[4] = DU;
+		solver.State[2] = 1;
+		solver.State[5] = 0.0000000000001 * sign(target_x - solver.State[2]);
+		solver.State[3] = (solver.State[5] > 0 ? p_i : p_s);
+		solver.State[4] = (solver.State[5] < 0 ? p_i : p_s);
 
 		max_x = std::min(max_x, (h + d) * 0.99 - l);
 
@@ -261,9 +320,10 @@ struct H_System
 	{
 		solver.Calc(this);
 
-		if (fabs(solver.State[1]) / solver.h < f_tr_suh / m)
-			solver.State[1] = 0;
 
+		solver.State[5] = MAX2(-1, MIN2(1, solver.State[5]));
+
+		solver.State[2] = MAX2(min_x, MIN2(max_x, solver.State[2]));
 	}
 
 };
@@ -273,12 +333,12 @@ void main()
 
 	H_System HD;
 
-	HD.solver.h = 0.00001;
+	HD.solver.h = 1e-20;
 	HD.F(HD.solver.State, &HD);
 	double ba = acos(HD.cosa);
 	std::ofstream Out("out.txt");
 	Out << std::scientific;
-	Out << std::setprecision(20);
+	Out << std::setprecision(15);
 	Out
 		<< "T" << ","
 		<< "V" << ","
@@ -286,6 +346,8 @@ void main()
 		<< "P1" << ","
 		<< "P2" << ","
 		<< "F" << ","
+		<< "H" << ","
+		<< "N" << ","
 		<< "A" << ","
 		<< "U" << ","
 		<< "CU" << ","
@@ -300,64 +362,60 @@ void main()
 		us;
 
 	float
-		k_p = 150,
-		k_d = 0,
-		k_i = 0,
-		target = 0.5,
+		target = 1,
 		dU = 10;
-	const float deadZone = 0.01;
+	const float deadZone = 0.0;
 	float U = deadZone * 2, OU = deadZone * 2;
 
 	float 
-		dt = 0.001,
+		dt = 0.0001,
 		ot = -dt * 2;
 
-	float maxTime = 50;
+	float maxTime = 30;
 
 	int j = 0;
 
 	float I = 0, BI = 0;
 
 	double mh = HD.solver.h;
-
-	for (int i = 0; HD.solver.State[0] < maxTime; i++)
+	//HD.solver.State[2] = target;
+	//HD.solver.State[1] = 1;
+	std::cout << std::scientific;
+	std::cout << std::setprecision(2);
+	double &T = HD.solver.State[0];
+	HD.solver.State[2] = 1;
+	for (int i = 0, j = 0, J = 0, KK = 0; T < maxTime; i++)
 	{
-
+		if (KK == 0 && T > 7)
+		{
+			KK++;
+			HD.target_x = 0.1;
+		}
+		else if (KK == 1 && T > 15)
+		{
+			KK++;
+			HD.target_x = 0.3;
+		}
+		else if (KK == 2 && T > 20)
+		{
+			KK++;
+			HD.target_x = 0.2;
+		}
+		else if (KK == 3 && T > 25)
+		{
+			KK++;
+			HD.target_x = 0.25;
+		}
 
 		double oh = HD.solver.h;
-		if (i % 10 == 0)
+		if (i % 100 == 0)
 		{
-			HD.solver.UpateH(&HD, MAX2(mh, HD.solver.h) * 4, 1e-12);
-			mh = mh * 0.99 + HD.solver.h * 0.01;
-			HD.solver.h = MIN2(mh, HD.solver.h);
-		}
-		U = HD.solver.State[1] * k_d + (target - HD.solver.State[2]) * k_p + I * k_i;
-		if (fabs(target - HD.solver.State[2]) < 1e-7)
-			U = 0;
-
-		U = fmin(fmax(-1, U), 1);
-
-		if (fabs(OU - U) > dU * HD.solver.h)
-		{
-			U = OU + ((U - OU) > 0 ? dU * HD.solver.h : -dU * HD.solver.h);
-		}
-		OU = U;
-		float TU = U;
-
-		I = I + (fabs(target - HD.solver.State[2]) < 1e-3 ? (target - HD.solver.State[2]) * HD.solver.h : 0);
-		if (I * (target - HD.solver.State[2]) < 0)
-			I *= .99;
-		if (fabs(TU) < deadZone)
-		{
-			TU = 0;
-		}
-		else
-		{
-			TU = TU - (TU > 0 ? deadZone : -deadZone);
-			TU /= 1 - deadZone;
+			HD.solver.UpateH(&HD, MIN2(1e-6, HD.solver.h * 2), 1e-0);
+			//mh = mh * 0.99 + HD.solver.h * 0.01;
+			//HD.solver.h = MIN2(mh, HD.solver.h);
 		}
 
-		HD.U = TU;
+
 
 		HD.F(HD.solver.State, &HD);
 		if (HD.solver.State[0] - ot >= dt)
@@ -371,17 +429,19 @@ void main()
 			p1.push_back(HD.solver.State[3]);
 			p2.push_back(HD.solver.State[4]);
 			n.push_back(HD.Fn);
-			us.push_back(TU);
+			us.push_back(HD.solver.State[5]);
 			Out
-				<< HD.solver.State[0] << ","
-				<< HD.solver.State[1] << ","
-				<< HD.solver.State[2] << ","
-				<< HD.solver.State[3] * HD.S1 << ","
-				<< HD.solver.State[4] * HD.S2 << ","
+				<< HD.solver.State[0] << ",\t"
+				<< HD.solver.State[1] << ",\t"
+				<< HD.solver.State[2] << ",\t"
+				<< HD.solver.State[3] * HD.S1 << ",\t"
+				<< HD.solver.State[4] * HD.S2 << ",\t"
+				<< HD.solver.State[3] * HD.S1 - HD.solver.State[4] * HD.S2 + HD.Fn << ",\t"
+				<< (HD.solver.State[3] * HD.S1 - HD.solver.State[4] * HD.S2 + HD.Fn - HD.b_prop * HD.solver.State[1]) / HD.m << ",\t"
 				<< HD.Fn << ","
 				<< (acos(HD.cosa) - ba) * 180 / PI << ","
-				<< TU << ","
-				<< U << ","
+				<< U_to_S_dead_zone(HD.solver.State[5], HD.U_deadZone) << ","
+				<< HD.solver.State[5] << ","
 				<< HD.solver.h << "\n";;
 			if(HD.solver.State[0] > 1)
 				if(mh > 1E-4 && fabsl(HD.solver.State[1]) < 1E-10)
@@ -389,14 +449,22 @@ void main()
 					//break;
 				}
 			Out.flush();
-			if (j % 100 == 0)
+			if (j % 1000 == 0)
 			{
 				for (int i = 0; i < 20; i++)
-					std::cout << (i / 19.0 > HD.solver.State[0] / maxTime ? "_" : "X");
-				std::cout << '\r';
+					std::cout << (i / 19.0 >= HD.solver.State[0] / maxTime ? "_" : "X");
+				std::cout << HD.solver.h << ' ' << HD.solver.State[0] << '\r';
 			}
 			j++;
 		}
+		if (J > 1000000)
+		{
+			for (int i = 0; i < 20; i++)
+				std::cout << (i / 19.0 >= HD.solver.State[0] / maxTime ? "_" : "X");
+			std::cout << HD.solver.h << ' ' << HD.solver.State[0] << '\r';
+			J = 0;
+		}
+		J++;
 		HD.Calc();
 		
 		double& _x = HD.solver.State[2];
@@ -408,127 +476,8 @@ void main()
 	std::cout << '\n';
 	Out.flush();
 	Out.close();
-	return;
-	uint32_t H = 800, W = 400;
 
-	sf::ContextSettings context_setting(0, 0, 2);
-	sf::RenderWindow window(sf::VideoMode(H, W), "SFML window", sf::Style::Default, context_setting);
-	sf::CircleShape shape(100.f);
-	shape.setFillColor(sf::Color::Green);
-
-	PoliLine 
-		X,
-		Y,
-		S_X,
-		S_V,
-		S_V0,
-		S_P1,
-		S_P2,
-		S_N,
-		S_T
-		;
-
-	X.Set(new sf::Vertex[2], 2);
-	Y.Set(new sf::Vertex[2], 2);
-	S_V0.Set(new sf::Vertex[2], 2);
-	S_P1.Set(new sf::Vertex[t.size()], t.size());
-	S_P2.Set(new sf::Vertex[t.size()], t.size());
-	S_N.Set(new sf::Vertex[t.size()], t.size());
-	S_X.Set(new sf::Vertex[t.size()], t.size());
-	S_T.Set(new sf::Vertex[t.size()], t.size());
-	S_V.Set(new sf::Vertex[t.size()], t.size());
-
-	X.SetColor(sf::Color::White);
-	Y.SetColor(sf::Color::White);
-	S_P1.SetColor(sf::Color::Red);
-	S_P2.SetColor(sf::Color::Blue);
-	S_N.SetColor(sf::Color::Green);
-	S_X.SetColor(sf::Color::Red);
-	S_T.SetColor(sf::Color::Green);
-	S_V.SetColor(sf::Color::Green);
-	S_V0.SetColor(sf::Color::Red);
-
-	X[0].position = { float(10), float(W - 10) };
-	X[1].position = { float(H - 10), float(W - 10) };
-
-	S_V0[0].position = { float(10), float(W - 10) };
-	S_V0[1].position = { float(H - 10), float(W - 10) };
-
-	Y[0].position = { float(10), float(W - 10) };
-	Y[1].position = { float(10), float(10) };
-
-	double Y_min = 1e20;
-	double Y_max = -1e20;
-
-	double
-		Vmin = 1e20,
-		Vmax = -1e20;
-
-	int Mode = 1;
-
-	for (int i = 0; i < t.size(); i++)
-	{
-		S_N[i].position = { float(10 + i * (H - 20) / float(t.size() - 1.0)), float(W * 0.5) };
-		S_V[i].position.x = S_T[i].position.x = S_X[i].position.x = S_P1[i].position.x = S_P2[i].position.x = S_N[i].position.x;
-		Y_min = std::min(p1[i], std::min(p2[i], std::min(n[i], Y_min)));
-		Y_max = std::max(p1[i], std::max(p2[i], std::max(n[i], Y_max)));
-		Vmin = std::min(v[i], Vmin);
-		Vmax = std::max(v[i], Vmax);
-	}
-
-	for (int i = 0; i < t.size(); i++)
-	{
-		S_N[i].position.y = W - 10 - (W - 20) * ((n[i] - Y_min) / (Y_max - Y_min));
-		S_P1[i].position.y = W - 10 - (W - 20) * ((p1[i] - Y_min) / (Y_max - Y_min));
-		S_P2[i].position.y = W - 10 - (W - 20) * ((p2[i] - Y_min) / (Y_max - Y_min));
-	}
-
-	for (int i = 0; i < t.size(); i++)
-	{
-		S_X[i].position.y = W - 10 - (W - 20) * ((x[i] - HD.min_x) / (HD.max_x - HD.min_x));
-		S_T[i].position.y = W - 10 - (W - 20) * ((target - HD.min_x) / (HD.max_x - HD.min_x));
-	}
-
-	for (int i = 0; i < t.size(); i++)
-	{
-		S_V[i].position.y = W - 10 - (W - 20) * ((v[i] - Vmin) / (Vmax - Vmin));
-	}
-
-	S_V0[1].position.y = S_V0[0].position.y = W - 10 - (W - 20) * ((0 - Vmin) / (Vmax - Vmin));
-
-	while (window.isOpen())
-	{
-		sf::Event event;
-		while (window.pollEvent(event))
-		{
-			if (event.type == sf::Event::Closed)
-				window.close();
-		}
-
-		window.clear();
-
-		window.draw(X);
-		window.draw(Y);
-
-		switch (Mode)
-		{
-		case 0:
-			window.draw(S_V);
-			window.draw(S_V0);
-
-			break;
-		case 1:
-			window.draw(S_T);
-			window.draw(S_X);
-
-			break;
-		default:
-			break;
-		}
-
-		window.display();
-	}
-
+	system("python main.py");
 
 }
 

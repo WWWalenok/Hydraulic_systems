@@ -116,7 +116,7 @@ struct RKSolver
 			}
 		}
 
-		h = oh * 0.7;
+		h = oh;
 
 	}
 
