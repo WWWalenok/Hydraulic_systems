@@ -89,7 +89,7 @@ struct DoubleActingHydraulicDrive
 		v = 0,
 		m = 1,
 		F = -9.81,
-		b_prop = 5,
+		b_prop = 0,
 		b_abs = 0.0,
 		c = 0,
 		p_s = 0,

@@ -12,7 +12,23 @@ import math
 
 
 data = np.genfromtxt("out.txt", delimiter=',', skip_header=1,
-                     skip_footer=10, names=['t', 'v', 'x', 'p1', 'p2', 'f', 'h', 'n', 'a', 'u', 'cu', 'dt'])
+                     skip_footer=10,
+                     names=
+                         [
+                            't',
+                            'v',
+                            'x',
+                            'p1',
+                            'p2',
+                            'f',
+                            'h',
+                            'n',
+                            'a',
+                            'cu',
+                            'u',
+                            'dt'
+                         ]
+                     )
 
 print(data)
 
@@ -34,9 +50,9 @@ sns.set_style("white")
 
 # Import Data
 
-X_tag = 't'
-Y1_tags = 'p1'
-Y2_tags = 'x'
+X_tag = 'x'
+Y1_tags = 'v'
+Y2_tags = 't'
 
 # Plot Line1 (Left Y Axis)
 fig, ax1 = plt.subplots(1, 1, figsize=(16,9))

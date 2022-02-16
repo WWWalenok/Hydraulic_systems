@@ -46,38 +46,39 @@ struct H_System
 	// прямой цилиндр
 	double
 		V1 = 0.1,
-		S1 = 0.1
+		S1 = 0.02
 		;
 	// обратный цилиндр
 	double
 		V2 = 0.1,
-		S2 = 0.1
+		S2 = 0.02
 		;
 	// Свойства рабочей жидкости
 	double
 		ro = 860,
-		E = 1.56E6
+		E = 1.56E5
 		;
 	// Харрактеристики дроссилей
 	double
 		mu = 0.62,
-		S = 0.01
+		S = 0.001
 		;
 	// Харрактеристики системы
 	double
 		min_x = 0,
 		max_x = 1,
-		m = 1,
-		b_prop = 0.0,
+		m = 10,
+		b_prop = 100,
 		f_tr_suh = 1,
 		p_s = 0,
 		p_i = 1000
 		;
 	// Управляющий сигнал
 	double
-		DU_max = 1,
+		U = 0,
+		DU_max = 10,
 		target_x = 0.5,
-		U_deadZone = 0.05,
+		U_deadZone = 0.01,
 		K_p = 10
 
 		;
@@ -219,19 +220,18 @@ struct H_System
 			& v = var[1],
 			& x = var[2],
 			& p1 = var[3],
-			& p2 = var[4],
-			& u = var[5];
+			& p2 = var[4];
 
 		H_System* T = (H_System*)(_t);
 
 		double 
-			_S = T->S * U_to_S_dead_zone(fabs(u), T->U_deadZone),
+			_S = T->S * U_to_S_dead_zone(fabs(T->U), T->U_deadZone),
 			Q1 = 0;
 
-		if (u > 0)
+		if (T->U > 0)
 			Q1 = T->mu * _S * sign(T->p_i - p1) * sqrt(2 / T->ro * fabs(T->p_i - p1));
 		else
-			Q1 = -T->mu * _S * sign(p1 - T->p_s) * sqrt(2 / T->ro * fabs(T->p_s - p1));
+			Q1 = T->mu * _S * sign( T->p_s - p1) * sqrt(2 / T->ro * fabs(T->p_s - p1));
 
 		double Vt1 = T->V1 + T->S1 * (x - T->min_x);
 
@@ -247,17 +247,16 @@ struct H_System
 			& v = var[1],
 			& x = var[2],
 			& p1 = var[3],
-			& p2 = var[4],
-			& u = var[5];
+			& p2 = var[4];
 
 		H_System* T = (H_System*)(_t);
 
 		double 
-			_S = T->S * U_to_S_dead_zone(fabs(u), T->U_deadZone),
+			_S = T->S * U_to_S_dead_zone(fabs(T->U), T->U_deadZone),
 			Q2 = 0;
 
-		if (u > 0)
-			Q2 = -T->mu * _S * sign(p2 - T->p_s) * sqrt(2 / T->ro * fabs(T->p_s - p2));
+		if (T->U > 0)
+			Q2 = T->mu * _S * sign(T->p_s - p2) * sqrt(2 / T->ro * fabs(T->p_s - p2));
 		else
 			Q2 = T->mu * _S * sign(T->p_i - p2) * sqrt(2 / T->ro * fabs(T->p_i - p2));
 
@@ -279,7 +278,7 @@ struct H_System
 
 		H_System* T = (H_System*)(_t);
 
-		double ret = -v * T->K_p + (T->target_x - x) * 1e20;
+		double ret = -v * T->K_p + (T->target_x - x) * T->K_p / T->solver.h;
 
 		ret = MAX2(-T->DU_max, MIN2(T->DU_max, ret));
 
@@ -287,7 +286,7 @@ struct H_System
 	}
 
 
-	RKSolver<5> solver;
+	RKSolver<4> solver;
 
 	H_System()
 	{
@@ -295,9 +294,7 @@ struct H_System
 		solver.funcs[1] = DX;
 		solver.funcs[2] = DP1;
 		solver.funcs[3] = DP2;
-		solver.funcs[4] = DU;
-		solver.State[2] = 1;
-		solver.State[5] = 0.0000000000001 * sign(target_x - solver.State[2]);
+		solver.State[2] = target_x;
 		solver.State[3] = (solver.State[5] > 0 ? p_i : p_s);
 		solver.State[4] = (solver.State[5] < 0 ? p_i : p_s);
 
@@ -318,12 +315,19 @@ struct H_System
 
 	void Calc()
 	{
+		double OU = U;
+		U = (target_x - solver.State[2]) * K_p;
+		double DU = U - OU;
+
+		DU = MAX2(-DU_max * solver.h, MIN2(DU_max * solver.h, DU));
+		U = OU + DU;
+
+		U = MAX2(-1, MIN2(1, U));
+
 		solver.Calc(this);
 
-
-		solver.State[5] = MAX2(-1, MIN2(1, solver.State[5]));
-
 		solver.State[2] = MAX2(min_x, MIN2(max_x, solver.State[2]));
+
 	}
 
 };
@@ -349,8 +353,8 @@ void main()
 		<< "H" << ","
 		<< "N" << ","
 		<< "A" << ","
-		<< "U" << ","
 		<< "CU" << ","
+		<< "U" << ","
 		<< "DT" << "\n";
 	std::vector<double>
 		t,
@@ -368,43 +372,43 @@ void main()
 	float U = deadZone * 2, OU = deadZone * 2;
 
 	float 
-		dt = 0.0001,
+		dt = 0.001,
 		ot = -dt * 2;
 
-	float maxTime = 30;
+	float maxTime = 10;
 
 	int j = 0;
 
 	float I = 0, BI = 0;
 
 	double mh = HD.solver.h;
-	//HD.solver.State[2] = target;
-	//HD.solver.State[1] = 1;
+	HD.solver.State[2] = 0;
+	HD.solver.State[1] = 0;
 	std::cout << std::scientific;
 	std::cout << std::setprecision(2);
 	double &T = HD.solver.State[0];
-	HD.solver.State[2] = 1;
+	//HD.solver.State[2] = 0.5;
 	for (int i = 0, j = 0, J = 0, KK = 0; T < maxTime; i++)
 	{
 		if (KK == 0 && T > 7)
 		{
 			KK++;
-			HD.target_x = 0.1;
+			//HD.target_x = 0.1;
 		}
 		else if (KK == 1 && T > 15)
 		{
 			KK++;
-			HD.target_x = 0.3;
+			//HD.target_x = 0.3;
 		}
 		else if (KK == 2 && T > 20)
 		{
 			KK++;
-			HD.target_x = 0.2;
+			//HD.target_x = 0.2;
 		}
 		else if (KK == 3 && T > 25)
 		{
 			KK++;
-			HD.target_x = 0.25;
+			//HD.target_x = 0.25;
 		}
 
 		double oh = HD.solver.h;
@@ -418,10 +422,10 @@ void main()
 
 
 		HD.F(HD.solver.State, &HD);
-		if (HD.solver.State[0] - ot >= dt)
+		if (T - ot >= dt)
 		{
 			
-			while (HD.solver.State[0] - ot >= dt)
+			while (T - ot >= dt)
 				ot += dt;
 			t.push_back(HD.solver.State[0]);
 			x.push_back(HD.solver.State[2]);
@@ -440,8 +444,8 @@ void main()
 				<< (HD.solver.State[3] * HD.S1 - HD.solver.State[4] * HD.S2 + HD.Fn - HD.b_prop * HD.solver.State[1]) / HD.m << ",\t"
 				<< HD.Fn << ","
 				<< (acos(HD.cosa) - ba) * 180 / PI << ","
-				<< U_to_S_dead_zone(HD.solver.State[5], HD.U_deadZone) << ","
-				<< HD.solver.State[5] << ","
+				<< U_to_S_dead_zone(fabs(HD.U), HD.U_deadZone) << ","
+				<< HD.U << ","
 				<< HD.solver.h << "\n";;
 			if(HD.solver.State[0] > 1)
 				if(mh > 1E-4 && fabsl(HD.solver.State[1]) < 1E-10)
