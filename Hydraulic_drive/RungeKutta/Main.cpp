@@ -40,53 +40,58 @@ static double U_to_S_dead_zone(double u, double dz)
 	return U_to_S(u);
 }
 
+inline float D2S(float D)
+{
+	return  std::powf(D * 0.5, 2) * 3.1415926535;
+}
+
 struct H_System
 {
 
 	// прямой цилиндр
 	double
-		V1 = 0.1,
-		S1 = 0.02
+		V1 = 0.01,
+		S1 = D2S(100 * 1E-3);
 		;
 	// обратный цилиндр
 	double
-		V2 = 0.1,
-		S2 = 0.02
+		V2 = 0.01,
+		S2 = D2S(100 * 1E-3) - D2S(50 * 1E-3);
 		;
 	// Свойства рабочей жидкости
 	double
 		ro = 860,
-		E = 1.56E5
+		E = 1.56E9
 		;
 	// Харрактеристики дроссилей
 	double
 		mu = 0.62,
-		S = 0.001
+		S = D2S((14 - 6) * 1E-3)
 		;
 	// Харрактеристики системы
 	double
 		min_x = 0,
-		max_x = 1,
+		max_x = 90,
 		m = 10,
-		b_prop = 100,
-		f_tr_suh = 1,
-		p_s = 0,
-		p_i = 1000
+		b_prop = 5,
+		f_tr_suh = 0,
+		p_s = 0.1 * 1E6,
+		p_i = 10 * 1E6
 		;
 	// Управляющий сигнал
 	double
-		U = 0,
+		U = 1,
 		DU_max = 10,
-		target_x = 0.5,
-		U_deadZone = 0.01,
-		K_p = 10
+		target_x = 1000,
+		U_deadZone = 0.00,
+		K_p = 1
 
 		;
 	// Допущения
 
 	// Геометрия
 	double
-		A[2]{ 1,-1 },
+		A[2]{ 200, 50},
 		B[2]{ 0,0 },
 		H[2]
 	{
@@ -94,8 +99,8 @@ struct H_System
 		A[1] - B[1],
 	},
 	h = sqrt(H[0] * H[0] + H[1] * H[1]),
-	l =  0.5,
-	d = 1,
+	l = max_x + 350 * 1E-2,
+	d = 50,
 	dh = 0,
 	dd = 0,
 	Ft[2]
@@ -110,6 +115,24 @@ struct H_System
 		sina = 0;
 	;
 
+	float V_r()
+	{
+		double* var = solver.State;
+		double
+			& t = var[0],
+			& v = var[1],
+			& x = var[2],
+			& p1 = var[3],
+			& p2 = var[4];
+		float
+			F0 = p_i * S1 - p_s * S2 + F(var, this),
+			K = ro * (S1 * S1 * S1 + S2 * S2 * S2) / (2 * mu * mu),
+			Sgn = (F0 > 0 ? 1 : -1),
+			_S = S * U_to_S_dead_zone(fabs(U), U_deadZone);
+		float ret = Sgn * _S * _S / (2 * K) * (sqrt(b_prop * b_prop + 4 * K / (_S * _S) * fabs(F0)) - b_prop);		
+		return ret;
+	}
+
 #define sign(x) (x == 0 ? 0 : (x > 0 ? 1 : -1))
 
 	static double F(double* var, void* _t)
@@ -120,6 +143,9 @@ struct H_System
 			& x = var[2],
 			& p1 = var[3],
 			& p2 = var[4];
+
+		//Dummy
+		return 0;
 
 		H_System *T = (H_System*)(_t);
 
@@ -168,7 +194,7 @@ struct H_System
 		return ret;
 	}
 
-	static  double DV(double* var, void* _t)
+	static double DV(double* var, void* _t)
 	{
 		double
 			& t = var[0],
@@ -288,19 +314,21 @@ struct H_System
 
 	RKSolver<4> solver;
 
-	H_System()
+	void Reset()
 	{
-		solver.funcs[0] = DV;
-		solver.funcs[1] = DX;
-		solver.funcs[2] = DP1;
-		solver.funcs[3] = DP2;
-		solver.State[2] = target_x;
-		solver.State[3] = (solver.State[5] > 0 ? p_i : p_s);
-		solver.State[4] = (solver.State[5] < 0 ? p_i : p_s);
+		l = std::max(l, fabs(h - d) * 1.01);
 
 		max_x = std::min(max_x, (h + d) * 0.99 - l);
 
+
+		solver.State[0] = 0;
+		solver.State[1] = 0;
+		solver.State[2] = 0.5 * (max_x + min_x);
+		solver.State[3] = p_i;
+		solver.State[4] = p_s;
+
 		F(solver.State, this);
+
 
 		{
 
@@ -310,6 +338,15 @@ struct H_System
 			solver.State[4] = solver.State[4] + pd;
 
 		}
+	}
+
+	H_System()
+	{
+		solver.funcs[0] = DV;
+		solver.funcs[1] = DX;
+		solver.funcs[2] = DP1;
+		solver.funcs[3] = DP2;
+		Reset();
 
 	}
 
@@ -332,12 +369,23 @@ struct H_System
 
 };
 
-void main()
+void Var1()
 {
-
 	H_System HD;
+	HD.U = 0;
+	HD.K_p = 0;
+	HD.solver.h = 1e-7;
 
-	HD.solver.h = 1e-20;
+	float
+		dt = 0.001,
+		ot = -dt * 2;
+
+	float maxTime = 25;
+
+	double& T = HD.solver.State[0];
+
+	HD.Reset();
+
 	HD.F(HD.solver.State, &HD);
 	double ba = acos(HD.cosa);
 	std::ofstream Out("out.txt");
@@ -364,30 +412,20 @@ void main()
 		p2,
 		n,
 		us;
-
-	float
-		target = 1,
-		dU = 10;
-	const float deadZone = 0.0;
-	float U = deadZone * 2, OU = deadZone * 2;
-
-	float 
-		dt = 0.001,
-		ot = -dt * 2;
-
-	float maxTime = 10;
-
 	int j = 0;
 
 	float I = 0, BI = 0;
 
 	double mh = HD.solver.h;
-	HD.solver.State[2] = 0;
-	HD.solver.State[1] = 0;
+	HD.solver.State[2] = HD.max_x * 0.5;
+	HD.solver.State[1] = 1;
 	std::cout << std::scientific;
 	std::cout << std::setprecision(2);
-	double &T = HD.solver.State[0];
 	//HD.solver.State[2] = 0.5;
+
+	int medC = maxTime / HD.solver.h / 100;
+	HD.target_x = HD.max_x * 0.9;
+	std::cout << HD.V_r() << std::endl; 
 	for (int i = 0, j = 0, J = 0, KK = 0; T < maxTime; i++)
 	{
 		if (KK == 0 && T > 7)
@@ -412,7 +450,7 @@ void main()
 		}
 
 		double oh = HD.solver.h;
-		if (i % 100 == 0)
+		if (i % 100 == -1)
 		{
 			HD.solver.UpateH(&HD, MIN2(1e-6, HD.solver.h * 2), 1e-0);
 			//mh = mh * 0.99 + HD.solver.h * 0.01;
@@ -424,7 +462,6 @@ void main()
 		HD.F(HD.solver.State, &HD);
 		if (T - ot >= dt)
 		{
-			
 			while (T - ot >= dt)
 				ot += dt;
 			t.push_back(HD.solver.State[0]);
@@ -447,21 +484,14 @@ void main()
 				<< U_to_S_dead_zone(fabs(HD.U), HD.U_deadZone) << ","
 				<< HD.U << ","
 				<< HD.solver.h << "\n";;
-			if(HD.solver.State[0] > 1)
-				if(mh > 1E-4 && fabsl(HD.solver.State[1]) < 1E-10)
+			if (HD.solver.State[0] > 1)
+				if (mh > 1E-4 && fabsl(HD.solver.State[1]) < 1E-10)
 				{
 					//break;
 				}
 			Out.flush();
-			if (j % 1000 == 0)
-			{
-				for (int i = 0; i < 20; i++)
-					std::cout << (i / 19.0 >= HD.solver.State[0] / maxTime ? "_" : "X");
-				std::cout << HD.solver.h << ' ' << HD.solver.State[0] << '\r';
-			}
-			j++;
 		}
-		if (J > 1000000)
+		if (J > medC)
 		{
 			for (int i = 0; i < 20; i++)
 				std::cout << (i / 19.0 >= HD.solver.State[0] / maxTime ? "_" : "X");
@@ -470,18 +500,81 @@ void main()
 		}
 		J++;
 		HD.Calc();
-		
-		double& _x = HD.solver.State[2];
-		if (_x > HD.max_x)
-			_x = HD.max_x;
-		if (_x < HD.min_x)
-			_x = HD.min_x;
 	}
 	std::cout << '\n';
 	Out.flush();
 	Out.close();
 
 	system("python main.py");
+}
+
+void Var2()
+{
+	H_System HD;
+
+	HD.solver.h = 1e-6;
+
+	float
+		dt = 0.001,
+		ot = -dt * 2;
+
+	float maxTime = 0.5;
+
+	double& T = HD.solver.State[0];
+
+	for (int a = -5; a <= 5; a++) for (int b = -5; b <= 5; b++) for (int c = -5; c <= 5; c++)
+	{
+		HD.Reset();
+
+		std::ofstream fout = std::ofstream(
+			"out\\smple_" +
+			std::to_string(a) +
+			"_" +
+			std::to_string(b) +
+			"_" +
+			std::to_string(c) +
+			".csv"
+		);
+		std::cout
+			<< "smple_" +
+			std::to_string(a) +
+			"_" +
+			std::to_string(b) +
+			"_" +
+			std::to_string(c) +
+			'\n';
+		fout << std::scientific;
+		fout << std::setprecision(10);
+		fout << "t,\tv,\tx,\tp1,\tp2,\ta\n";
+		HD.solver.State[1] = a * 3.34e-02 * 0.5;
+
+		float minp = MIN2(HD.solver.State[3], HD.solver.State[4]);
+
+		HD.solver.State[3] += b * minp * 0.1;
+		HD.solver.State[4] += c * minp * 0.1;
+		for (int i = 0, j = 0, J = 0, KK = 0; T <= maxTime; i++)
+		{
+			J++;
+			if (i % 100 == 0)
+			{
+				fout
+					<< HD.solver.State[0] << ",\t"
+					<< HD.solver.State[1] << ",\t"
+					<< HD.solver.State[2] << ",\t"
+					<< HD.solver.State[3] << ",\t"
+					<< HD.solver.State[4] << ",\t"
+					<< HD.DV(HD.solver.State, &HD) << "\n"
+					;
+			}
+			HD.Calc();
+		}
+	}
+
+}
+
+void main()
+{
+	Var1();
 
 }
 
