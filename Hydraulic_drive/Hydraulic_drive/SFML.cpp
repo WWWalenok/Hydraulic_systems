@@ -92,8 +92,8 @@ struct DoubleActingHydraulicDrive
 		b_prop = 0,
 		b_abs = 0.0,
 		c = 0,
-		p_s = 0,
-		p_i = 10000,
+		p_sliv = 0,
+		p_input = 10000,
 		dv = 0,
 		dp1 = 0,
 		dp2 = 0
@@ -107,19 +107,19 @@ struct DoubleActingHydraulicDrive
 		switch (mode)
 		{
 		case FRWARD:
-			Q1 = mu * S * step(p_i - p1) * sqrt(2 / ro * abs(p_i - p1));
-			Q2 = -mu * S * step(p2 - p_s) * sqrt(2 / ro * abs(p_s - p2));
+			Q1 = mu * S * step(p_input - p1) * sqrt(2 / ro * abs(p_input - p1));
+			Q2 = -mu * S * step(p2 - p_sliv) * sqrt(2 / ro * abs(p_sliv - p2));
 			break;
 		case BACK:
-			Q2 = mu * S * sign(p_i - p2) * sqrt(2 / ro * abs(p_i - p2));
-			Q1 = -mu * S * step(p1 - p_s) * sqrt(2 / ro * abs(p_s - p1));
+			Q2 = mu * S * sign(p_input - p2) * sqrt(2 / ro * abs(p_input - p2));
+			Q1 = -mu * S * step(p1 - p_sliv) * sqrt(2 / ro * abs(p_sliv - p1));
 			break;
 		case BLOCK:
 			Q1 = 0;
 			Q2 = 0;
 		case SLIV:
-			Q1 = -mu * S * step(p1 - p_s) * sqrt(2 / ro * abs(p_s - p1));
-			Q2 = -mu * S * step(p2 - p_s) * sqrt(2 / ro * abs(p_s - p2));
+			Q1 = -mu * S * step(p1 - p_sliv) * sqrt(2 / ro * abs(p_sliv - p1));
+			Q2 = -mu * S * step(p2 - p_sliv) * sqrt(2 / ro * abs(p_sliv - p2));
 			break;
 		default:
 			break;
@@ -183,8 +183,8 @@ struct DoubleActingHydraulicDrive_NoDp
 		F = -0,
 		b = 5,
 		c = 0,
-		p_s = 1,
-		p_i = 10000,
+		p_sliv = 1,
+		p_input = 10000,
 		dv = 0
 		;
 	Mode mode = BLOCK;
@@ -194,20 +194,20 @@ struct DoubleActingHydraulicDrive_NoDp
 		switch (mode)
 		{
 		case FRWARD:
-			p1 = p_i;
-			p2 = p_s;
+			p1 = p_input;
+			p2 = p_sliv;
 			break;
 		case BACK:
-			p2 = p_i;
-			p1 = p_s;
+			p2 = p_input;
+			p1 = p_sliv;
 			break;
 		case BLOCK:
 			p1 = 0;
 			p2 = 0;
 			break;
 		case SLIV:
-			p2 = p_s;
-			p1 = p_s;
+			p2 = p_sliv;
+			p1 = p_sliv;
 			break;
 		default:
 			break;

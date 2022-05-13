@@ -1,4 +1,8 @@
 #pragma once
+#include <thread>
+#include <mutex>
+
+
 
 #define MAX2(a,b) (a > b ? a : b)
 
@@ -32,10 +36,17 @@ struct RKSolver
 		}
 	}
 
+private:
+
+	double K[Size][4];
+	double select[Size + 1];
+
+public:
+
 	void Calc(void* _t)
 	{
-		double K[Size][4];
-		double select[Size + 1];
+		for (int i = 0; i < Size + 1; i++)
+			select[i] = State[i];
 
 		// K1
 		for (int i = 0; i < Size + 1; i++)
