@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e2ba0787-8bdf-4c38-899d-4c0a9fd98da7" name="Changes" comment="" />
+    <list default="true" id="e2ba0787-8bdf-4c38-899d-4c0a9fd98da7" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../Hydraulic_drive/Hydraulic_drive.vcxproj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Hydraulic_drive/Hydraulic_drive.vcxproj.filters" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Hydraulic_drive/SFML.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Hidro.h" beforeDir="false" afterPath="$PROJECT_DIR$/Hidro.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RKSolver.h" beforeDir="false" afterPath="$PROJECT_DIR$/RKSolver.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RungeKutta.vcxproj" beforeDir="false" afterPath="$PROJECT_DIR$/RungeKutta.vcxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RungeKutta.vcxproj.filters" beforeDir="false" afterPath="$PROJECT_DIR$/RungeKutta.vcxproj.filters" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/multi.py" beforeDir="false" afterPath="$PROJECT_DIR$/multi.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -22,10 +35,57 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/multi.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/double_1.py" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
-  <component name="RunManager" selected="Python.multi">
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\Repos\Hydraulic_systems\Hydraulic_drive\RungeKutta" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.main">
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="RungeKutta" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Python\Python310\python.exe" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="double_1" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="RungeKutta" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Python\Python310\python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/double_1.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="RungeKutta" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -68,9 +128,32 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="multy_vToy" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="RungeKutta" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Python\Python310\python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/multy_vToy.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <list>
       <item itemvalue="Python.main" />
+      <item itemvalue="Python.double_1" />
       <item itemvalue="Python.multi" />
+      <item itemvalue="Python.multy_vToy" />
     </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -83,16 +166,5 @@
       <updated>1643573225668</updated>
     </task>
     <servers />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>3</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

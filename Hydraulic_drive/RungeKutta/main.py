@@ -12,34 +12,19 @@ import math
 warnings.filterwarnings(action='once')
 
 data = np.genfromtxt(
-    "out.csv",
+    "out_real.csv",
     delimiter=',',
-    skip_header=1,
-    skip_footer=10,
-    names=
-    [
-        't',
-        'v',
-        'x',
-        'p1',
-        'p2',
-        'f',
-        'h',
-        'n',
-        'a',
-        'cu',
-        'y',
-        'dt'
-    ]
+    skip_header=0,
+    names=True
 )
 
-#print(data)
+print(data)
 
 
 large = 20; med = 14; small = 12
 params = {'axes.titlesize': large,
           'legend.fontsize': med,
-          'figure.figsize': (12, 8),
+          'figure.figsize': (12, 10),
           'axes.labelsize': med,
           'axes.titlesize': med,
           'xtick.labelsize': med,
@@ -53,49 +38,45 @@ sns.set_style("white")
 
 # Import Data
 
-X_tag = 't'
-Y1_tags = 'v'
-Y2_tags = 'y'
+X_tag = 'T'
+Ys_tags = [['QI', 'QS'], ['Q1', 'Q2'], ['U', 'Y']]
+Zs_tags = [[], [], ['V']]
+axs = []
 
 # Plot Line1 (Left Y Axis)
-fig, ax1 = plt.subplots(1, 1, figsize=(12,8))
 
-ax1.plot(data[X_tag], data[Y1_tags])
+axs.append(plt.subplot(311))
+axs.append(plt.subplot(312))
+axs.append(plt.subplot(313))
 
-v = [0] * 7 * 2
+for i in range(len(axs)):
+    ax = axs[i]
+    Y_tags = Ys_tags[i]
+    Z_tags = Zs_tags[i]
 
-ax1_d = [min(data[Y1_tags]), max(data[Y1_tags])]
-ax2_d = [min(data[Y2_tags]), max(data[Y2_tags])]
-
-
-ax2 = ax1.twinx()
-ax2.plot(data[X_tag], data[Y2_tags], color='red')
-
-# Plot Line2 (Right Y Axis)
-
-ax1.set_title("Зависимость", fontsize=22)
-
-# Decorations
-# ax1 (left Y axis)
-ax1.set_xlabel(X_tag, fontsize=20)
-ax1.tick_params(axis='x', rotation=0, labelsize=12)
-ax1.set_ylabel(Y1_tags, color='tab:blue', fontsize=20)
-ax1.tick_params(axis='y', rotation=0, labelcolor='tab:blue' )
-ax1.grid(alpha=.2)
+    lines = []
 
 
-ax2.set_ylabel(Y2_tags, color='tab:red', fontsize=20)
+    for Y_tag in Y_tags:
+        line, = ax.plot(data[X_tag], data[Y_tag], label=Y_tag)
+        lines.append(line)
 
-ax2.tick_params(axis='y', labelcolor='tab:red')
+    ax.set_xlabel(X_tag, fontsize=20)
+    ax.tick_params(axis='x', rotation=0, labelsize=12)
+    ax.set_ylabel(Y_tags, color='tab:blue', fontsize=20)
+    ax.tick_params(axis='y', rotation=0, labelcolor='tab:blue' )
+    ax.grid(alpha=.2)
 
-ax2.set_ylim([min(data[Y2_tags]), max(data[Y2_tags])])
+    tags = Y_tags
 
-plt.xlim([min(data[X_tag]), max(data[X_tag])])
+    if len(Z_tags) > 0:
+        axZ = ax.twinx()
+        axZ.set_ylabel(Z_tags, color='tab:blue', fontsize=20)
+        for Z_tag in Z_tags:
+            line, = axZ.plot(data[X_tag], data[Z_tag], color = 'C{a}'.format(a = len(Y_tags)), label=Z_tag)
+            lines.append(line)
 
-ax1.set_ylim([ax1_d[0] * 1.01 - ax1_d[1] * 0.01, ax1_d[1] * 1.01 - ax1_d[0] * 0.01])
-ax2.set_ylim([ax2_d[0] * 1.01 - ax2_d[1] * 0.01, ax2_d[1] * 1.01 - ax2_d[0] * 0.01])
-
-#fig.tight_layout()
+    ax.legend(handles = lines, labels = Y_tags + Z_tags)
 
 plt.tight_layout()
 

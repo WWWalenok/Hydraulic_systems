@@ -13,9 +13,14 @@ import sys
 print(sys.argv)
 
 files = sys.argv[2:]
-
+out_name = ''
+if(len(sys.argv) > 1):
+    out_name = sys.argv[1]
+else:
+    out_name = 'base'
 if len(files) == 0:
-    exit(10)
+
+    files = ['real', 'linear']
 
 warnings.filterwarnings(action='once')
 datas = []
@@ -31,7 +36,7 @@ for name in files:
 large = 20; med = 14; small = 12
 params = {'axes.titlesize': large,
           'legend.fontsize': med,
-          'figure.figsize': (10, 4),
+          'figure.figsize': (10, 6),
           'axes.labelsize': med,
           'axes.titlesize': med,
           'xtick.labelsize': med,
@@ -48,11 +53,12 @@ sns.set_style("white")
 X_tag = 'T'
 Y1_tags = 'X'
 Y2_tags = 'U'
+Y3_tags = 'V'
 
 # Plot Line1 (Left Y Axis)
-fig, ax1 = plt.subplots(1, 1, figsize=(10,5))
-
-
+ax1 = plt.subplot(221)
+ax2 = plt.subplot(223)
+ax3 = plt.subplot(122)
 I = 0
 
 tags = []
@@ -79,34 +85,40 @@ ax1.set_title("", fontsize=0)
 # ax1 (left Y axis)
 ax1.set_xlabel('Время: T s.', fontsize=20)
 ax1.tick_params(axis='x', rotation=0, labelsize=12)
-ax1.set_ylabel('Скорость: V  m/s.', fontsize=20)
+ax1.set_ylabel('Перемещение: X  m.', fontsize=20)
 ax1.tick_params(axis='y', rotation=0)
+
+plt.legend(tags)
+
+for data in datas :
+    ax2.plot(data[X_tag], data[Y2_tags])
+
+ax2.set_ylabel("Управление", fontsize=20)
+
+ax2.tick_params(axis='y')
+
+plt.legend(tags)
+
+
+for data in datas :
+    ax3.plot(data[X_tag], data[Y3_tags])
+
+ax3.set_ylabel('Скорость: V  m/s.', fontsize=20)
+
+ax3.tick_params(axis='y')
+
+plt.legend(tags)
+
+
 ax1.grid(alpha=.2)
-
-
-#ax1.set_ylim([ax1_d[0] * 1.01 - ax1_d[1] * 0.01, ax1_d[1] * 1.01 - ax1_d[0] * 0.01])
-
-if 1 :
-
-    ax2 = ax1.twinx()
-    for data in datas :
-        ax2.plot(data[X_tag], data[Y2_tags], color = 'tab:red')
-
-    ax2.set_ylabel("Управление", color='tab:red', fontsize=20)
-
-    ax2.tick_params(axis='y', labelcolor='tab:red')
-
-
-
-
-
-
+ax2.grid(alpha=.2)
+ax3.grid(alpha=.2)
 
 #fig.tight_layout()
 
 plt.tight_layout()
 
-plt.savefig("E:\\Repos\\Latex\\rsgc_1\\" + sys.argv[1] + ".png", format = "png")
+plt.savefig("E:\\Repos\\Latex\\rsgc_1\\" + out_name + ".png", format = "png")
 
 plt.show()
 

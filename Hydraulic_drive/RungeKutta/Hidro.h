@@ -11,35 +11,34 @@ const double
 G = 9.81,
 PI = 3.1415926535;
 
-static inline double U_to_S(double u)
+static inline double U_to_S(double y)
 {
-	u = 2 * u - 1;
-	u = MAX2(-1, MIN2(1, u));
+	y = 2 * y - 1;
+	y = MAX2(-1, MIN2(1, y));
 	return
-		1 - (acos(u) - u * sqrt(1 - u * u)) / PI;
+		1 - (acos(y) - y * sqrt(1 - y * y)) / PI;
 }
 
-static double U_to_S_dead_zone(double u, double dz)
+static double U_to_S_dead_zone(double y, double dz)
 {
 
-	if(fabs(u) < dz)
+	if(fabs(y) < dz)
 	{
-		u = 0;
+		y = 0;
 	}
 	else
 	{
-		u = u - (u > 0 ? dz : -dz);
-		u /= 1 - dz;
+		y = y - (y > 0 ? dz : -dz);
+		y /= 1 - dz;
 	}
 
-	return U_to_S(u);
+	return U_to_S(y);
 }
 
 inline float D2S(float D)
 {
 	return  std::powf(D * 0.5, 2) * 3.1415926535;
 }
-
 
 static double DV(double *var, void *_t);
 
@@ -49,23 +48,34 @@ static  double DP1(double *var, void *_t);
 
 static double DP2(double *var, void *_t);
 
+static double DY(double *var, void *_t);
+
+static double DDY(double *var, void *_t);
+
+inline double Get_U(double stat[2], double U)
+{
+	float X = (stat[0] - U) / (stat[0] - stat[1]);
+
+	return MAX2(0, MIN2(1, X));
+}
+
 struct H_System
 {
 
 	// пр€мой цилиндр
 	double
-		V1 = 0.01,
-		S1 = D2S(100 * 1E-3);
-	;
+		V1 = 0.1,
+		S1 = D2S(80 * 1E-3);
+	;  
 	// обратный цилиндр
 	double
-		V2 = 0.01,
-		S2 = D2S(100 * 1E-3) - D2S(50 * 1E-3);
+		V2 = 0.1,
+		S2 = D2S(80 * 1E-3) - D2S(60 * 1E-3);
 	;
 	// —войства рабочей жидкости
 	double
 		ro = 860,
-		E = 1.56E7
+		E = 1.56E9
 		;
 	// ’аррактеристики дроссилей
 	double
@@ -76,28 +86,29 @@ struct H_System
 	double
 		min_x = 0,
 		max_x = 10,
-		m = 10,
-		b_prop = 5,
+		m = 1,
+		b_prop = 10,
 		f_tr_suh = 0,
-		p_sliv = 0.1 * 1E6,
+		p_sliv = 135,
 		p_input = 10 * 1E6
 		;
 
-	// ”правл€ющий сигнал
+	// «олотник
 	double
 		U = 1,
-		DU_max = 10,
-		p1_sliv_stat[2]{-0.01, -1}, 
-		p1_input_stat[2]{0.01, 1},
-		p2_sliv_stat[2]{0.01, 1},
-		p2_input_stat[2]{-0.01, -1}
+		U_K = 30,
+		U_T = 0.01,
+		p1_sliv_stat[2]{	0.0,	-1}, 
+		p1_input_stat[2]{	0.02,	1},
+		p2_sliv_stat[2]{	-0.0,	1},
+		p2_input_stat[2]{	-0.02,	-1}
 		;
 
 	// –егул€тор
 
 	double
 		target_x = 0.5,
-		K_p = 1,
+		K_p = 10,
 		K_d = 0,
 		K_i = 0;
 
@@ -105,43 +116,7 @@ struct H_System
 	IForse *
 		force = (new Forse_manipulator());
 
-	RKSolver<4> solver = RKSolver<4>();
-
-	double
-		&t = solver.State[0],
-		&v = solver.State[1],
-		&x = solver.State[2],
-		&p1 = solver.State[3],
-		&p2 = solver.State[4],
-		&dt = solver.h;
-
-	inline double U1_input()
-	{
-		float X = (p1_input_stat[0] - U) / (p1_input_stat[0] - p1_input_stat[1]);
-
-		return MAX2(0, MIN2(1, X));
-	}
-
-	inline double U1_sliv()
-	{
-		float X = (p1_sliv_stat[0] - U) / (p1_sliv_stat[0] - p1_sliv_stat[1]);
-
-		return MAX2(0, MIN2(1, X));
-	}
-
-	inline double U2_input()
-	{
-		float X = (p2_input_stat[0] - U) / (p2_input_stat[0] - p2_input_stat[1]);
-
-		return MAX2(0, MIN2(1, X));
-	}
-
-	inline double U2_sliv()
-	{
-		float X = (p2_sliv_stat[0] - U) / (p2_sliv_stat[0] - p2_sliv_stat[1]);
-
-		return MAX2(0, MIN2(1, X));
-	}
+	RKSolver<6> solver = RKSolver<6>();
 
 	void Reset()
 	{
@@ -162,6 +137,8 @@ struct H_System
 		solver.State[2] = 0.5 * (max_x + min_x);
 		solver.State[3] = p_input;
 		solver.State[4] = p_sliv;
+		solver.State[5] = 0;
+		//solver.State[6] = 0;
 
 		{
 
@@ -179,25 +156,174 @@ struct H_System
 		solver.funcs[1] = DX;
 		solver.funcs[2] = DP1;
 		solver.funcs[3] = DP2;
+		solver.funcs[4] = DY;
+		solver.funcs[5] = DDY;
 		Reset();
-
 	}
 
 	void Calc()
 	{
-		double OU = U;
-		U = (target_x - solver.State[2]) * K_p;
-		double DU = U - OU;
-
-		DU = MAX2(-DU_max * solver.h, MIN2(DU_max * solver.h, DU));
-		U = OU + DU;
-
+		//U = 1;
 		U = MAX2(-1, MIN2(1, U));
 
 		solver.Calc(this);
 
 		solver.State[2] = MAX2(min_x, MIN2(max_x, solver.State[2]));
+		solver.State[5] = MAX2(-1, MIN2(1, solver.State[5]));
+	}
 
+	const double K_err = 1;
+
+	double Get_K()
+	{
+		double ret = 
+			K_err * ro * (S1 * S1 * S1 + S2 * S2 * S2) / (2 * mu * mu * S * S);
+		return
+			ret;
+	}
+
+	double Get_F_0()
+	{
+		double ret =
+			p_input * S1 - p_sliv * S2;
+		return
+			ret;
+	}
+
+	double Get_V_r()
+	{
+		double
+			K = Get_K(),
+			F_0 = Get_F_0(),
+			ret =  b_prop / (2 * K) * (sqrt(1 + 4 * K * abs(F_0) / (b_prop * b_prop)) - 1);
+
+		return
+			ret;
+	}
+
+	double Get_P1_r()
+	{
+		double
+			v_r = Get_V_r(),
+			ret = p_input - v_r * abs(v_r) * ro * S1 * S1 / (S * S * 2 * mu * mu);
+
+		return
+			ret;
+	}
+
+	double Get_P2_r()
+	{
+		double
+			v_r = Get_V_r(),
+			ret = p_sliv + v_r * abs(v_r) * ro * S2 * S2 / (S * S * 2 * mu * mu);
+
+		return
+			ret;
+	}
+
+	double Get_DP_t(double v, double a)
+	{
+		double
+			F_0 = Get_F_0(),
+			ret = (F_0 - v * b_prop - a * m) / (S1 + S2);
+
+		return
+			ret;
+	}
+
+	double Get_P1_t(double v, double a)
+	{
+		return
+			p_input - Get_DP_t(v, a);
+	}
+
+	double Get_P2_t(double v, double a)
+	{
+		return
+			p_sliv + Get_DP_t(v, a);
+	}
+
+	double Get_T()
+	{
+		double
+			K = Get_K(),
+			v_r = Get_V_r(),
+			ret =  m / (2 * K * abs(Get_V_r())+b_prop);
+
+		return
+			ret;
+	}
+
+	inline double GetQ1(double *var)
+	{
+		double
+			&t = var[0],
+			&v = var[1],
+			&x = var[2],
+			&p1 = var[3],
+			&p2 = var[4],
+			&y = var[5],
+			&dy = var[6];
+
+		double Q = 0;
+		Q += mu * Get_U(p1_input_stat, y) * S * sign(p_input - p1) * sqrt(2 / ro * fabs(p_input - p1));
+		Q += mu * Get_U(p1_sliv_stat, y) * S * sign(p_sliv - p1) * sqrt(2 / ro * fabs(p_sliv - p1));
+
+		return Q;
+	}
+
+	inline double GetQ2(double *var)
+	{
+		double
+			&t = var[0],
+			&v = var[1],
+			&x = var[2],
+			&p1 = var[3],
+			&p2 = var[4],
+			&y = var[5],
+			&dy = var[6];
+
+		double Q = 0;
+		Q += mu * Get_U(p2_input_stat, y) * S * sign(p_input - p2) * sqrt(2 / ro * fabs(p_input - p2));
+		Q += mu * Get_U(p2_sliv_stat, y) * S * sign(p_sliv - p2) * sqrt(2 / ro * fabs(p_sliv - p2));
+
+		return Q;
+	}
+
+	inline double GetQI(double *var)
+	{
+		double
+			&t = var[0],
+			&v = var[1],
+			&x = var[2],
+			&p1 = var[3],
+			&p2 = var[4],
+			&y = var[5],
+			&dy = var[6];
+
+		double Q = 0;
+		Q += mu * Get_U(p1_input_stat, y) * S * sign(p_input - p1) * sqrt(2 / ro * fabs(p_input - p1));
+		Q += mu * Get_U(p2_input_stat, y) * S * sign(p_input - p2) * sqrt(2 / ro * fabs(p_input - p2));
+
+		return Q;
+	}
+
+	inline double GetQS(double *var)
+	{
+		double
+			&t = var[0],
+			&v = var[1],
+			&x = var[2],
+			&p1 = var[3],
+			&p2 = var[4],
+			&y = var[5],
+			&dy = var[6];
+
+		double Q = 0;
+		Q += mu * Get_U(p1_sliv_stat, y) * S * sign(p_sliv - p1) * sqrt(2 / ro * fabs(p_sliv - p1));
+		Q += mu * Get_U(p2_sliv_stat, y) * S * sign(p_sliv - p2) * sqrt(2 / ro * fabs(p_sliv - p2));
+
+		return Q;
 	}
 
 };
@@ -209,10 +335,12 @@ static double DV(double *var, void *_t)
 		&v = var[1],
 		&x = var[2],
 		&p1 = var[3],
-		&p2 = var[4];
+		&p2 = var[4],
+		&y = var[5],
+		&dy = var[6];
 
 	H_System *T = (H_System *)(_t);
-	double _F = (T->S1 * p1 - T->S2 * p2 - T->b_prop * v + T->force->F(var, _t));
+	double _F = (T->S1 * p1 - T->S2 * p2 - T->b_prop * v);
 	double ret = _F / T->m;
 	return ret;
 
@@ -230,7 +358,9 @@ static  double  DX(double *var, void *_t)
 		&v = var[1],
 		&x = var[2],
 		&p1 = var[3],
-		&p2 = var[4];
+		&p2 = var[4],
+		&y = var[5],
+		&dy = var[6];
 
 	H_System *T = (H_System *)(_t);
 
@@ -251,14 +381,13 @@ static  double DP1(double *var, void *_t)
 		&v = var[1],
 		&x = var[2],
 		&p1 = var[3],
-		&p2 = var[4];
+		&p2 = var[4],
+		&y = var[5],
+		&dy = var[6];
 
 	H_System *T = (H_System *)(_t);
 
-	double Q = 0;
-
-	Q += T->mu * U_to_S(T->U1_input()) * T->S * sign(T->p_input - p1) * sqrt(2 / T->ro * fabs(T->p_input - p1));
-	Q += T->mu * U_to_S(T->U1_sliv()) * T->S * sign(T->p_sliv - p1) * sqrt(2 / T->ro * fabs(T->p_sliv - p1));
+	double Q = T->GetQ1(var);
 
 	double Vt1 = T->V1 + T->S1 * (x - T->min_x);
 
@@ -274,14 +403,13 @@ static double DP2(double *var, void *_t)
 		&v = var[1],
 		&x = var[2],
 		&p1 = var[3],
-		&p2 = var[4];
+		&p2 = var[4],
+		&y = var[5],
+		&dy = var[6];
 
 	H_System *T = (H_System *)(_t);
 
-	double Q = 0;
-
-	Q += T->mu * U_to_S(T->U2_input()) * T->S * sign(T->p_input - p1) * sqrt(2 / T->ro * fabs(T->p_input - p1));
-	Q += T->mu * U_to_S(T->U2_sliv()) * T->S * sign(T->p_sliv - p1) * sqrt(2 / T->ro * fabs(T->p_sliv - p1));
+	double Q = T->GetQ2(var);
 
 	double Vt2 = T->V2 + T->S2 * (T->max_x - x);
 
@@ -290,20 +418,43 @@ static double DP2(double *var, void *_t)
 	return ret;
 }
 
-static  double  DU(double *var, void *_t)
+static double DY(double *var, void *_t)
 {
 	double
 		&t = var[0],
 		&v = var[1],
 		&x = var[2],
 		&p1 = var[3],
-		&p2 = var[4];
+		&p2 = var[4],
+		&y = var[5],
+		&dy = var[6];
+
+	double ret = dy;
+
+	if(y >= 1 && dy > 0)
+		ret = 0;
+	if(y <= -1 && dy < 0)
+		ret = 0;
+
+	return ret;
+}
+
+static double DDY(double *var, void *_t)
+{
+	double
+		&t = var[0],
+		&v = var[1],
+		&x = var[2],
+		&p1 = var[3],
+		&p2 = var[4],
+		&y = var[5],
+		&dy = var[6];
 
 	H_System *T = (H_System *)(_t);
 
-	double ret = -v * T->K_p + (T->target_x - x) * T->K_p / T->solver.h;
+	double u_t = T->U;
 
-	ret = MAX2(-T->DU_max, MIN2(T->DU_max, ret));
+	u_t = MAX2(-1, MIN2(1, u_t));
 
-	return ret;
+	return u_t * T->U_K / T->U_T - dy / T->U_T -  y * T->U_K / T->U_T;
 }

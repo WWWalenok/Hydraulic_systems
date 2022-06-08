@@ -13,7 +13,7 @@ struct RKSolver
 {
 	static double BaseFunction(double* A, void* B)
 	{
-		return 1;
+		return 0;
 	}
 
 	typedef double (*FuncPtr)(double*, void*);

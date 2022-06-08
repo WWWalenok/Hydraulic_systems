@@ -18,15 +18,15 @@ if len(files) == 0:
     exit(10)
 
 warnings.filterwarnings(action='once')
-datas = []
+data = 0
 for name in files:
-    data = np.genfromtxt(
+    tdata = np.genfromtxt(
         "out_" + name + ".csv",
         delimiter=',',
         skip_header=0,
         names=True
-)
-    datas.append(data)
+    )
+    data = tdata
 
 large = 20; med = 14; small = 12
 params = {'axes.titlesize': large,
@@ -45,8 +45,8 @@ sns.set_style("white")
 
 # Import Data
 
-X_tag = 'T'
-Y1_tags = 'X'
+X_tag = 'U'
+Y1_tags = 'V'
 Y2_tags = 'U'
 
 # Plot Line1 (Left Y Axis)
@@ -57,19 +57,13 @@ I = 0
 
 tags = []
 
-for data in datas:
-    ax1.plot(data[X_tag], data[Y1_tags])
-    tags.append(files[I])
-    I += 1
+ax1.plot(data[X_tag], data[Y1_tags])
+tags.append(files[I])
 
 v = [0] * 7 * 2
 
-plt.legend(tags, loc = 'lower right')
+plt.legend(tags)
 
-ax1_d = [min(data[Y1_tags]), max(data[Y1_tags])]
-ax2_d = [min(data[Y2_tags]), max(data[Y2_tags])]
-
-plt.xlim([min(data[X_tag]), max(data[X_tag])])
 
 # Plot Line2 (Right Y Axis)
 
@@ -77,7 +71,7 @@ ax1.set_title("", fontsize=0)
 
 # Decorations
 # ax1 (left Y axis)
-ax1.set_xlabel('Время: T s.', fontsize=20)
+ax1.set_xlabel('Управление.', fontsize=20)
 ax1.tick_params(axis='x', rotation=0, labelsize=12)
 ax1.set_ylabel('Скорость: V  m/s.', fontsize=20)
 ax1.tick_params(axis='y', rotation=0)
@@ -89,8 +83,7 @@ ax1.grid(alpha=.2)
 if 1 :
 
     ax2 = ax1.twinx()
-    for data in datas :
-        ax2.plot(data[X_tag], data[Y2_tags], color = 'tab:red')
+    ax2.plot(data[X_tag], data[Y2_tags], color = 'tab:red')
 
     ax2.set_ylabel("Управление", color='tab:red', fontsize=20)
 

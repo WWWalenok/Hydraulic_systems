@@ -156,8 +156,10 @@
   <ItemGroup>
     <ClInclude Include="Force.h" />
     <ClInclude Include="Hidro.h" />
+    <ClInclude Include="Pered.h" />
     <ClInclude Include="PoliLine.h" />
     <ClInclude Include="RKSolver.h" />
+    <ClInclude Include="System.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
