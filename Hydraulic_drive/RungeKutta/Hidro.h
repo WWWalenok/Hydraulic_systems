@@ -64,18 +64,18 @@ struct H_System
 
 	// ïğÿìîé öèëèíäğ
 	double
-		V1 = 0.1,
+		V1 = 0.01,
 		S1 = D2S(80 * 1E-3);
 	;  
 	// îáğàòíûé öèëèíäğ
 	double
-		V2 = 0.1,
+		V2 = 0.01,
 		S2 = D2S(80 * 1E-3) - D2S(60 * 1E-3);
 	;
 	// Ñâîéñòâà ğàáî÷åé æèäêîñòè
 	double
 		ro = 860,
-		E = 1.56E9
+		E = 2.02E9
 		;
 	// Õàğğàêòåğèñòèêè äğîññèëåé
 	double
@@ -87,7 +87,7 @@ struct H_System
 		min_x = 0,
 		max_x = 10,
 		m = 1,
-		b_prop = 10,
+		b = 10,
 		f_tr_suh = 0,
 		p_sliv = 135,
 		p_input = 10 * 1E6
@@ -172,12 +172,10 @@ struct H_System
 		solver.State[5] = MAX2(-1, MIN2(1, solver.State[5]));
 	}
 
-	const double K_err = 1;
-
 	double Get_K()
 	{
 		double ret = 
-			K_err * ro * (S1 * S1 * S1 + S2 * S2 * S2) / (2 * mu * mu * S * S);
+			ro * (S1 * S1 * S1 + S2 * S2 * S2) / (2 * mu * mu * S * S);
 		return
 			ret;
 	}
@@ -195,7 +193,7 @@ struct H_System
 		double
 			K = Get_K(),
 			F_0 = Get_F_0(),
-			ret =  b_prop / (2 * K) * (sqrt(1 + 4 * K * abs(F_0) / (b_prop * b_prop)) - 1);
+			ret =  b / (2 * K) * (sqrt(1 + 4 * K * abs(F_0) / (b * b)) - 1);
 
 		return
 			ret;
@@ -225,7 +223,7 @@ struct H_System
 	{
 		double
 			F_0 = Get_F_0(),
-			ret = (F_0 - v * b_prop - a * m) / (S1 + S2);
+			ret = (F_0 - v * b - a * m) / (S1 + S2);
 
 		return
 			ret;
@@ -248,7 +246,7 @@ struct H_System
 		double
 			K = Get_K(),
 			v_r = Get_V_r(),
-			ret =  m / (2 * K * abs(Get_V_r())+b_prop);
+			ret =  m / (2 * K * abs(Get_V_r())+b);
 
 		return
 			ret;
@@ -326,6 +324,17 @@ struct H_System
 		return Q;
 	}
 
+	double GetK_old()
+	{
+		double
+			K = Get_K(),
+			F_0 = Get_F_0(),
+			v_r = Get_V_r(),
+			ret = sign(F_0)*(abs(F_0) - b*b/(4 * K) * std::pow(sqrt(S*S +  (4 * K * abs(F_0)) / (b*b)), 2)) / b;	
+
+		return
+			ret;
+	}
 };
 
 static double DV(double *var, void *_t)
@@ -340,7 +349,7 @@ static double DV(double *var, void *_t)
 		&dy = var[6];
 
 	H_System *T = (H_System *)(_t);
-	double _F = (T->S1 * p1 - T->S2 * p2 - T->b_prop * v);
+	double _F = (T->S1 * p1 - T->S2 * p2 - T->b * v);
 	double ret = _F / T->m;
 	return ret;
 

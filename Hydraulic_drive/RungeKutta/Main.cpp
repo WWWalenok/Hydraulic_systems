@@ -13,156 +13,6 @@ void PrintHD(std::ofstream *fout, H_System &HD)
 float maxTime = 5 * 1.000;
 float dt = 0.001;
 
-void Var2()
-{
-	H_System HD;
-
-	HD.solver.h = 1e-6;
-
-	float
-		ot = -dt * 2;
-
-	double &T = HD.solver.State[0];
-
-	for(int a = -5; a <= 5; a++) for(int b = -5; b <= 5; b++) for(int c = -5; c <= 5; c++)
-	{
-		HD.Reset();
-
-		std::ofstream fout = std::ofstream(
-			"out\\smple_" +
-			std::to_string(a) +
-			"_" +
-			std::to_string(b) +
-			"_" +
-			std::to_string(c) +
-			".csv"
-		);
-		std::cout
-			<< "smple_" +
-			std::to_string(a) +
-			"_" +
-			std::to_string(b) +
-			"_" +
-			std::to_string(c) +
-			'\n';
-		fout << std::scientific;
-		fout << std::setprecision(10);
-		fout << "t,\tv,\tx,\tp1,\tp2,\ta\n";
-		HD.solver.State[1] = a * 3.34e-02 * 0.5;
-
-		float minp = MIN2(HD.solver.State[3], HD.solver.State[4]);
-
-		HD.solver.State[3] += b * minp * 0.1;
-		HD.solver.State[4] += c * minp * 0.1;
-		for(int i = 0, j = 0, J = 0, KK = 0; T <= maxTime; i++)
-		{
-			J++;
-			if(i % 100 == 0)
-			{
-				fout
-					<< HD.solver.State[0] << ",\t"
-					<< HD.solver.State[1] << ",\t"
-					<< HD.solver.State[2] << ",\t"
-					<< HD.solver.State[3] << ",\t"
-					<< HD.solver.State[4] << ",\t"
-					<< DV(HD.solver.State, &HD) << "\n"
-					;
-			}
-			HD.Calc();
-		}
-	}
-
-}
-
-void Var1()
-{
-	H_System HD;
-	HD.Reset();
-	Forse_manipulator *force = dynamic_cast<Forse_manipulator *>(HD.force);
-	HD.U = 0;
-	HD.K_p = 15;
-	HD.solver.h = 1e-7;
-
-	float
-		ot = -dt * 2;
-
-	double &T = HD.solver.State[0];
-
-	force->F(HD.solver.State, &HD);
-	double ba = acos(force->cosa);
-	std::ofstream Out("out.csv");
-	Out << std::scientific;
-	Out << std::setprecision(15);
-	Out
-		<< "T" << ","
-		<< "V" << ","
-		<< "X" << ","
-		<< "P1" << ","
-		<< "P2" << ","
-		<< "F" << ","
-		<< "H" << ","
-		<< "N" << ","
-		<< "A" << ","
-		<< "CU" << ","
-		<< "U" << ","
-		<< "DT" << "\n";
-	int j = 0;
-
-	float I = 0, BI = 0;
-
-	double mh = HD.solver.h;
-	HD.solver.State[2] = HD.max_x * 0.01;
-	HD.solver.State[1] = 0
-		;
-	HD.target_x = HD.max_x * 0.1;
-
-	std::cout << std::scientific;
-	std::cout << std::setprecision(2);
-	//HD.solver.State[2] = 0.5;
-
-	std::cout << HD.Get_K() << std::endl;
-
-	int medC = maxTime / HD.solver.h / 250;
-	HD.target_x = HD.max_x * 0.1;
-	for(int i = 0, j = 0, J = medC * 2, KK = 0; T <= maxTime + dt * 10; i++)
-	{
-		force->F(HD.solver.State, &HD);
-		if(T - ot >= dt)
-		{
-			while(T - ot >= dt)
-				ot += dt;
-			Out
-				<< HD.solver.State[0] << ",\t"
-				<< HD.solver.State[1] << ",\t"
-				<< HD.solver.State[2] << ",\t"
-				<< HD.solver.State[3] * HD.S1 << ",\t"
-				<< HD.solver.State[4] * HD.S2 << ",\t"
-				<< HD.solver.State[3] * HD.S1 - HD.solver.State[4] * HD.S2 + force->Fn << ",\t"
-				<< DV(HD.solver.State, &HD) << ",\t"
-				<< force->Fn << ","
-				<< (acos(force->cosa) - ba) * 180 / PI << ","
-				<< HD.U << ","
-				<< HD.solver.State[5] << ","
-				<< HD.solver.h << "\n";;
-			Out.flush();
-		}
-		if(J > medC)
-		{
-			for(int i = 0; i < 20; i++)
-				std::cout << (i / 19.0 >= HD.solver.State[0] / maxTime ? "_" : "X");
-			std::cout << HD.solver.h << ' ' << HD.solver.State[0] << '\r';
-			J = 0;
-		}
-		J++;
-		HD.Calc();
-	}
-	std::cout << '\n';
-	Out.flush();
-	Out.close();
-
-	system("python main.py");
-}
-
 float GetU(float T, int& j)
 {
 	float TT = 0.5 * T;
@@ -189,15 +39,15 @@ float GetU(float T, int& j)
 		U = 0;
 	else if(T < 1.1)
 		U = 1;
-	else if(T < 1.6)
+	else if(T < 2.1)
 		U = 0;
-	else if(T < 2.6)
+	else if(T < 3.1)
 		U = -1;
-	else if(T < 3)
-		U = 0;
-	else if(T < 3.5)
-		U = 0.5;
 	else if(T < 4)
+		U = 0;
+	else if(T < 4.5)
+		U = 0.5;
+	else if(T < 5)
 		U = -0.5;
 	else if(T < 10)
 		U = 0;
@@ -249,7 +99,7 @@ float GetU(float T, int& j)
 	return U;
 }
 
-void Var1_2(H_System& HD, std::string name)
+void Base(H_System& HD, std::string name)
 {
 	HD.Reset();
 	Forse_manipulator *force = dynamic_cast<Forse_manipulator *>(HD.force);
@@ -304,7 +154,7 @@ void Var1_2(H_System& HD, std::string name)
 				<< HD.solver.State[2] << ",\t"
 				<< HD.solver.State[3] << ",\t"
 				<< HD.solver.State[4] << ",\t"
-				<< (HD.solver.State[3] * HD.S1 - HD.solver.State[4] * HD.S2 + force->Fn - HD.solver.State[1] * HD.b_prop) / HD.m << ",\t"
+				<< (HD.solver.State[3] * HD.S1 - HD.solver.State[4] * HD.S2 + force->Fn - HD.solver.State[1] * HD.b) / HD.m << ",\t"
 				<< HD.solver.State[3] * HD.S1 - HD.solver.State[4] * HD.S2 + force->Fn << ",\t"
 				<< HD.solver.State[3] * HD.S1 << ",\t"
 				<< HD.solver.State[4] * HD.S2 << ",\t"
@@ -332,7 +182,7 @@ void Var1_2(H_System& HD, std::string name)
 	Out.close();
 }
 
-void Var_LLin(H_System& HD, std::string name, float P_K, float P_T)
+void Linear(H_System& HD, std::string name, float P_K, float P_T)
 {
 	float
 		ot = -dt * 2;
@@ -434,7 +284,7 @@ void Var_LLin(H_System& HD, std::string name, float P_K, float P_T)
 	Out.close();
 }
 
-void Var_Norm(H_System& HD, std::string name)
+void NonLinear(H_System& HD, std::string name)
 {
 	float
 		ot = -dt * 2;
@@ -463,7 +313,7 @@ void Var_Norm(H_System& HD, std::string name)
 
 	double 
 		t = 0,
-		x = 0,
+		x = 2,
 		v = 0,
 		a = 0,
 		u = 0,
@@ -475,11 +325,11 @@ void Var_Norm(H_System& HD, std::string name)
 	double KK = HD.Get_K();
 	double F_0 = HD.Get_F_0();
 
-
+	double stat[10];
 	for(int i = 0, j = 0, J = medC * 2; t <= maxTime; i++)
 	{
-		HD.U = (HD.target_x - x) * HD.K_p;
-		HD.U = MAX2(-1, MIN2(1, HD.U));
+		control = GetU(t, j);
+		control = MAX2(-1, MIN2(1, control));
 		if(t - ot >= dt)
 		{
 			while(t - ot >= dt)
@@ -500,6 +350,15 @@ void Var_Norm(H_System& HD, std::string name)
 			J = 0;
 		}
 		//solve
+
+
+		stat[0] = t;
+		stat[1] = v;
+		stat[2] = x;
+		stat[3] = 0;
+		stat[4] = 0;
+		stat[5] = u;
+		stat[4] = 0;
 		{
 			double nddu = control * HD.U_K / HD.U_T - du /HD.U_T -  u * HD.U_K / HD.U_T;
 			double ndu = du + dt_solve * (nddu);
@@ -509,9 +368,14 @@ void Var_Norm(H_System& HD, std::string name)
 			double nv = 0;
 			double nx = x;
 
+			if(u > 0)
+				F_0 = HD.S1 * HD.p_input - HD.S2 * HD.p_sliv + HD.force->F(stat, &HD);
+			else
+				F_0 = HD.S1 * HD.p_sliv - HD.S2 * HD.p_input + HD.force->F(stat, &HD);
+
 			if(u * u > 1e-10)
 			{
-				na = (-v * abs(v) * KK / (u * u) - HD.b_prop * v + F_0) / HD.m;
+				na = (-v * abs(v) * KK / (u * u) - HD.b * v + F_0) / HD.m;
 				nv = v + dt_solve * (na + a) * 0.5;
 				nx = x + dt_solve * (nv + v) * 0.5;
 			}
@@ -556,27 +420,42 @@ void main()
 
 		temp.freeze(false);
 
-		Var1_2(HD, fname);
-		HD.E *= powf(10, -1.0);
+		Base(HD, fname);
+		//HD.E *= powf(10, -1.0);
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}
 
-	if(false)
+	if(1)
 	{
 		std::strstream temp;
 
-		temp << std::scientific << std::setprecision(3)<< "linear" << '\0';
+		temp << std::scientific << std::setprecision(3)<< "linear_1" << '\0';
 
 		std::string fname = "out_" + std::string(temp.str()) + ".csv";
 
 		temp.freeze(false);
 
-		Var_LLin(HD, fname, HD.Get_V_r(), HD.Get_T());
-		HD.E *= powf(10, -1.0);
+		Linear(HD, fname, HD.Get_V_r(), HD.Get_T());
+		//HD.E *= powf(10, -1.0);
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}
 
-	if(false)
+	if(1)
+	{
+		std::strstream temp;
+
+		temp << std::scientific << std::setprecision(3)<< "linear_2" << '\0';
+
+		std::string fname = "out_" + std::string(temp.str()) + ".csv";
+
+		temp.freeze(false);
+
+		Linear(HD, fname, HD.GetK_old(), HD.m / HD.b);
+		//HD.E *= powf(10, -1.0);
+		fnames += " \"" + std::string(temp.str()) + "\"";
+	}
+
+	if(0)
 	{
 		std::strstream temp;
 
@@ -586,13 +465,13 @@ void main()
 
 		temp.freeze(false);
 
-		Var_Norm(HD, fname);
-		HD.E *= powf(10, -1.0);
+		//NonLinear(HD, fname);
+		//HD.E *= powf(10, -1.0);
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}
 
-	system("python main.py ");
-	//system(("python double_1.py " + out_name_base + fnames).c_str());
+	//system("python main.py ");
+	system(("python double_1.py " + out_name_base + fnames).c_str());
 
 	return;
 
@@ -607,7 +486,7 @@ void main()
 
 		temp.freeze(false);
 
-		Var1_2(HD, fname);
+		Base(HD, fname);
 		HD.E *= powf(10, -1.0);
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}
