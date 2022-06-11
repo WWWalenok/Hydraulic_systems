@@ -13,29 +13,20 @@ void PrintHD(std::ofstream *fout, H_System &HD)
 float maxTime = 10 * 1.000;
 float dt = 0.001;
 
-float GetU(float T, int& j)
+double ie = 0;
+
+float
+	K_p = 1,
+	K_d = 0,
+	K_i = 0;
+
+float U = 4;
+
+float GetU(float T, float x, float v, double dt)
 {
-	return 1;
-
-	float TT = 0.5 * T;
-	int a = int(TT) % 4;
-	float b = TT - int(TT);
-
-	float U = 0;
-	if(0)
-	switch(a)
-	{
-		case 0:
-		return b;
-		case 1:
-		return 1 - b;
-		case 2:
-		return - b;
-		case 3:
-		return -1 + b;
-		default:
-		break;
-	}
+	double e = U - x;
+	ie += e * dt;
+	return e * K_p + v * K_d + (ie - e * dt * 0.5) * K_i;
 
 	if(T < 0.1)
 		U = 0;
@@ -56,48 +47,6 @@ float GetU(float T, int& j)
 	else if(T < 10)
 		U = 0;
 
-	return U;
-
-	switch(j)
-	{
-		case 0:
-		{
-			U = 1;
-			if(T > 1)
-				j++;
-			break;
-		}
-		case 1:
-		{
-			U = 0;
-			if(T > 1.5)
-				j++;
-			break;
-		}
-		case 2:
-		{
-			U = -1;
-			if(T > 2)
-				j++;
-			break;
-		}
-		case 3:
-		{
-			U = 0.5;
-			if(T > 3)
-				j++;
-			break;
-		}
-		case 4:
-		{
-			U = -0.5;
-			if(T > 4)
-				j++;
-			break;
-		}
-		default:
-		break;
-	}
 	return U;
 }
 
@@ -140,7 +89,7 @@ void Base(H_System& HD, std::string name)
 
 	for(int i = 0, j = 0, J = medC * 2, KK = 0; T <= maxTime; i++)
 	{
-		HD.U = GetU(T, j);
+		HD.U = GetU(T, HD.solver.State[2], HD.solver.State[1], HD.solver.h);
 		HD.U = MAX2(-1, MIN2(1, HD.U));
 		force->F(HD.solver.State, &HD);
 		if(T - ot >= dt)
@@ -188,9 +137,6 @@ void Linear(H_System& HD, std::string name, float P_K, float P_T)
 
 	float dt_solve = 1e-7;
 
-
-	float control = 1;
-
 	std::ofstream Out(name);
 	Out << std::scientific;
 	Out << std::setprecision(15);
@@ -212,7 +158,7 @@ void Linear(H_System& HD, std::string name, float P_K, float P_T)
 
 	double 
 		T = 0,
-		x = 2,
+		x = 0,
 		v = 0,
 		a = 0,
 		u = 0,
@@ -230,8 +176,7 @@ void Linear(H_System& HD, std::string name, float P_K, float P_T)
 
 	for(int i = 0, j = 0, J = medC * 2, KK = 0; T <= maxTime; i++)
 	{
-		HD.U = GetU(T, j);
-		//HD.U = (HD.target_x - x) * HD.K_p;
+		HD.U = GetU(T, x, v, dt_solve);
 		HD.U = MAX2(-1, MIN2(1, HD.U));
 		if(T - ot >= dt)
 		{
@@ -290,9 +235,6 @@ void NonLinear(H_System& HD, std::string name)
 
 	float dt_solve = 1e-10;
 
-
-	float control = 1;
-
 	std::ofstream Out(name);
 	Out << std::scientific;
 	Out << std::setprecision(15);
@@ -311,8 +253,8 @@ void NonLinear(H_System& HD, std::string name)
 	//HD.solver.State[2] = 0.5;
 
 	double 
-		t = 0,
-		x = 2,
+		T = 0,
+		x = 0,
 		v = 0,
 		a = 0,
 		u = 0,
@@ -325,16 +267,16 @@ void NonLinear(H_System& HD, std::string name)
 	double F_0 = HD.Get_F_0();
 
 	double stat[10];
-	for(int i = 0, j = 0, J = medC * 2; t <= maxTime; i++)
+	for(int i = 0, j = 0, J = medC * 2; T <= maxTime; i++)
 	{
-		control = GetU(t, j);
-		control = MAX2(-1, MIN2(1, control));
-		if(t - ot >= dt)
+		HD.U = GetU(T, x, v, dt_solve);
+		HD.U = MAX2(-1, MIN2(1, HD.U));
+		if(T - ot >= dt)
 		{
-			while(t - ot >= dt)
+			while(T - ot >= dt)
 				ot += dt;
 			Out
-				<< t << ",\t"
+				<< T << ",\t"
 				<< x << ",\t"
 				<< v << ",\t"
 				<< a << ",\t"
@@ -344,14 +286,14 @@ void NonLinear(H_System& HD, std::string name)
 		if(J > medC)
 		{
 			for(int i = 0; i < 20; i++)
-				std::cout << (i / 19.0 > t / maxTime ? "_" : "X");
-			std::cout << dt_solve << ' ' << t << '\r';
+				std::cout << (i / 19.0 > T / maxTime ? "_" : "X");
+			std::cout << dt_solve << ' ' << T << '\r';
 			J = 0;
 		}
 		//solve
 
 
-		stat[0] = t;
+		stat[0] = T;
 		stat[1] = v;
 		stat[2] = x;
 		stat[3] = 0;
@@ -359,7 +301,7 @@ void NonLinear(H_System& HD, std::string name)
 		stat[5] = u;
 		stat[4] = 0;
 		{
-			double nddu = control * HD.U_K / HD.U_T - du /HD.U_T -  u * HD.U_K / HD.U_T;
+			double nddu = HD.U * HD.U_K / HD.U_T - du /HD.U_T -  u * HD.U_K / HD.U_T;
 			double ndu = du + dt_solve * (nddu);
 			double nu = u + dt_solve * (ndu);
 
@@ -386,7 +328,7 @@ void NonLinear(H_System& HD, std::string name)
 			v = nv;
 			a = na;
 
-			t += dt_solve;
+			T += dt_solve;
 		}
 		J++;
 	}
@@ -453,8 +395,7 @@ void LinearStab(H_System& HD, std::string name)
 
 	for(int i = 0, j = 0, J = medC * 2, KK = 0; T <= maxTime; i++)
 	{
-		HD.U = GetU(T, j);
-		//HD.U = (HD.target_x - x) * HD.K_p;
+		HD.U = GetU(T, x, v, dt_solve);
 		HD.U = MAX2(-1, MIN2(1, HD.U));
 		if(T - ot >= dt)
 		{
@@ -521,7 +462,14 @@ void main()
 
 	HD.target_x = 1;
 
-	if(1)
+	float K_T = HD.Get_T();
+	float K_K = HD.Get_V_r();
+
+	K_d = (30 * K_T - 1) / K_K;
+	K_p = (304 * K_T) / K_K;
+	K_i = (1040 * K_T) / K_K;
+
+	if(0)
 	{
 		std::strstream temp;
 
@@ -537,12 +485,10 @@ void main()
 	}
 	if(1)
 	{
-		HD.solver.State[2] = 2;
-		HD.solver.State[1] = HD.Get_V_r() * 0.75;
-		HD.Reset(0, HD.Get_V_r() * 0.75, 2, HD.Get_P1_r(), HD.Get_P2_r(), 1);
+		HD.Reset();
 		std::strstream temp;
 
-		temp << std::scientific << std::setprecision(3)<< "real_stab" << '\0';
+		temp << std::scientific << std::setprecision(3)<< "real" << '\0';
 
 		std::string fname = "out_" + std::string(temp.str()) + ".csv";
 
@@ -556,7 +502,7 @@ void main()
 
 
 
-	if(0)
+	if(1)
 	{
 		std::strstream temp;
 
@@ -601,28 +547,9 @@ void main()
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}
 
-	//system("python main.py ");
-	system(("python double_1.py " + out_name_base + fnames).c_str());
+	system("python manual_multy.py");
+	//system(("python double_1.py " + out_name_base + fnames).c_str());
 
 	return;
-
-	HD.E = 2.062E9;
-	for(int i = 0; i < 2; i++)
-	{
-		std::strstream temp;
-
-		temp << std::scientific << std::setprecision(3)<< "E = " << HD.E << '\0';
-
-		std::string fname = "out_" + std::string(temp.str()) + ".csv";
-
-		temp.freeze(false);
-
-		Base(HD, fname);
-		HD.E *= powf(10, -1.0);
-		fnames += " \"" + std::string(temp.str()) + "\"";
-	}
-
-	system(("python multi.py " + out_name_base + fnames).c_str());
-	//system(("python multy_vToy.py " + out_name_second + fnames).c_str());
 }
 

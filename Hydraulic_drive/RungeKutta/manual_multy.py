@@ -8,9 +8,9 @@ import warnings
 import math
 
 warnings.filterwarnings(action='once')
-out_name = 'example_all'
+out_name = 'base'
 
-names = ['real', 'non linear', 'linear 2', 'linear 1']
+names = ['real', 'linear 1']
 datas = []
 for name in names:
     datas.append(np.genfromtxt(
@@ -19,7 +19,7 @@ for name in names:
         skip_header=0,
         names=True
     ))
-names = ['diff model', 'non linear model', 'linear 8.2', 'linear 8.3']
+names = ['diff model', 'linear']
 
 
 large = 20; med = 14; small = 12
@@ -40,7 +40,7 @@ sns.set_style("white")
 # Import Data
 
 X_tag = 'T'
-Ys_tags = [['V'],['X'],[],[],[],[],[]]
+Ys_tags = [['V'],['U'],[],[],[],[],[]]
 Zs_tags = [[],[],[],[],[],[],[],[]]
 axs = []
 

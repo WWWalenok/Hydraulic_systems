@@ -318,7 +318,7 @@ struct H_System
 		{
 			solver.State[0] = 0;
 			solver.State[1] = 0;
-			solver.State[2] = (max_x + min_x) * 0.5;
+			solver.State[2] = 0;
 			solver.State[3] = p_input;
 			solver.State[4] = p_sliv;
 			solver.State[5] = 0;

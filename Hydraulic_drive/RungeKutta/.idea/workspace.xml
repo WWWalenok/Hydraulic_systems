@@ -2,17 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e2ba0787-8bdf-4c38-899d-4c0a9fd98da7" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Hidro.h" beforeDir="false" afterPath="$PROJECT_DIR$/Hidro.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/double_1.py" beforeDir="false" afterPath="$PROJECT_DIR$/double_1.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/manual.py" beforeDir="false" afterPath="$PROJECT_DIR$/manual.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/manual_multy.py" beforeDir="false" afterPath="$PROJECT_DIR$/manual_multy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out_linear_1.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_linear 1.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out_linear_2.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_linear 2.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out_non linear.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_non linear.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out_real.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_real.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out_linear 1.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_linear 1.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out_real_stab.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_real_stab.csv" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,7 +32,7 @@
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/manual_multy.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/symple.py" />
     <property name="settings.editor.selected.configurable" value="preferences.general" />
   </component>
   <component name="RecentsManager">
@@ -45,7 +40,7 @@
       <recent name="E:\Repos\Hydraulic_systems\Hydraulic_drive\RungeKutta" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.manual">
+  <component name="RunManager" selected="Python.manual_multy">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="RungeKutta" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -172,11 +167,33 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="symple" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="RungeKutta" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Python\Python310\python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/symple.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <list>
       <item itemvalue="Python.double_1" />
       <item itemvalue="Python.multi" />
       <item itemvalue="Python.multy_vToy" />
       <item itemvalue="Python.manual" />
+      <item itemvalue="Python.symple" />
       <item itemvalue="Python.manual_multy" />
     </list>
   </component>
