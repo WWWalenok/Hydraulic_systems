@@ -2,9 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e2ba0787-8bdf-4c38-899d-4c0a9fd98da7" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Hidro.h" beforeDir="false" afterPath="$PROJECT_DIR$/Hidro.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/manual.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/double_1.py" beforeDir="false" afterPath="$PROJECT_DIR$/double_1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/manual.py" beforeDir="false" afterPath="$PROJECT_DIR$/manual.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/manual_multy.py" beforeDir="false" afterPath="$PROJECT_DIR$/manual_multy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out_linear_1.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_linear 1.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out_linear_2.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_linear 2.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out_non linear.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_non linear.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out_real.csv" beforeDir="false" afterPath="$PROJECT_DIR$/out_real.csv" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -27,17 +34,18 @@
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/manual_multy.py" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="preferences.general" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="E:\Repos\Hydraulic_systems\Hydraulic_drive\RungeKutta" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.manual_multy">
+  <component name="RunManager" selected="Python.manual">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="RungeKutta" />
       <option name="INTERPRETER_OPTIONS" value="" />

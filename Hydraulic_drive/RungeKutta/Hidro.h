@@ -75,7 +75,7 @@ struct H_System
 	// Свойства рабочей жидкости
 	double
 		ro = 860,
-		E = 2.02E9
+		E = 2.02E7
 		;
 	// Харрактеристики дроссилей
 	double
@@ -117,49 +117,6 @@ struct H_System
 		force = (new Forse_manipulator());
 
 	RKSolver<6> solver = RKSolver<6>();
-
-	void Reset()
-	{
-		{
-			Forse_manipulator *T = dynamic_cast<Forse_manipulator *>(force);
-			if(T != 0)
-			{
-				T->l = std::max(T->l, fabs(T->h - T->d) * 1.01);
-
-				max_x = std::min(max_x, (T->h + T->d) * 0.99 - T->l);
-
-			}
-		}
-
-
-		solver.State[0] = 0;
-		solver.State[1] = 0;
-		solver.State[2] = 0.5 * (max_x + min_x);
-		solver.State[3] = p_input;
-		solver.State[4] = p_sliv;
-		solver.State[5] = 0;
-		//solver.State[6] = 0;
-
-		{
-
-			double pd = (S1 * solver.State[3] - S2 * solver.State[4] + force->F(solver.State, this)) / (S1 + S2);
-
-			solver.State[3] = solver.State[3] - pd;
-			solver.State[4] = solver.State[4] + pd;
-
-		}
-	}
-
-	H_System()
-	{
-		solver.funcs[0] = DV;
-		solver.funcs[1] = DX;
-		solver.funcs[2] = DP1;
-		solver.funcs[3] = DP2;
-		solver.funcs[4] = DY;
-		solver.funcs[5] = DDY;
-		Reset();
-	}
 
 	void Calc()
 	{
@@ -334,6 +291,69 @@ struct H_System
 
 		return
 			ret;
+	}
+
+
+
+	void Reset(
+		bool base_init = true,
+		double v = 0, 
+		double x = 0,
+		double p1 = 0, 
+		double p2 = 0,
+		double u = 0)
+	{
+		{
+			Forse_manipulator *T = dynamic_cast<Forse_manipulator *>(force);
+			if(T != 0)
+			{
+				T->l = std::max(T->l, fabs(T->h - T->d) * 1.01);
+
+				max_x = std::min(max_x, (T->h + T->d) * 0.99 - T->l);
+
+			}
+		}
+
+		if(base_init)
+		{
+			solver.State[0] = 0;
+			solver.State[1] = 0;
+			solver.State[2] = (max_x + min_x) * 0.5;
+			solver.State[3] = p_input;
+			solver.State[4] = p_sliv;
+			solver.State[5] = 0;
+
+			{
+
+				double pd = (S1 * solver.State[3] - S2 * solver.State[4] + force->F(solver.State, this)) / (S1 + S2);
+
+				solver.State[3] = p_input - pd;
+				solver.State[4] = p_sliv  + pd;
+
+			}
+		}
+		else
+		{
+			solver.State[0] = 0;
+			solver.State[1] = v;
+			solver.State[2] = x;
+			solver.State[3] = p1;
+			solver.State[4] = p2;
+			solver.State[5] = u;
+		}
+		//solver.State[6] = 0;
+
+	}
+
+	H_System()
+	{
+		solver.funcs[0] = DV;
+		solver.funcs[1] = DX;
+		solver.funcs[2] = DP1;
+		solver.funcs[3] = DP2;
+		solver.funcs[4] = DY;
+		solver.funcs[5] = DDY;
+		Reset();
 	}
 };
 

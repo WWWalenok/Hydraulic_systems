@@ -51,14 +51,14 @@ sns.set_style("white")
 # Import Data
 
 X_tag = 'T'
-Y1_tags = 'X'
-Y2_tags = 'U'
-Y3_tags = 'V'
+Y1_tags = 'V'
+Y2_tags = 'P1'
+Y3_tags = 'P2'
 
 # Plot Line1 (Left Y Axis)
-ax1 = plt.subplot(221)
-ax2 = plt.subplot(223)
-ax3 = plt.subplot(122)
+ax1 = plt.subplot(311)
+ax2 = plt.subplot(312)
+ax3 = plt.subplot(313)
 I = 0
 
 tags = []
@@ -72,10 +72,6 @@ v = [0] * 7 * 2
 
 plt.legend(tags, loc = 'lower right')
 
-ax1_d = [min(data[Y1_tags]), max(data[Y1_tags])]
-ax2_d = [min(data[Y2_tags]), max(data[Y2_tags])]
-
-plt.xlim([min(data[X_tag]), max(data[X_tag])])
 
 # Plot Line2 (Right Y Axis)
 
@@ -85,29 +81,29 @@ ax1.set_title("", fontsize=0)
 # ax1 (left Y axis)
 ax1.set_xlabel('Время: T s.', fontsize=20)
 ax1.tick_params(axis='x', rotation=0, labelsize=12)
-ax1.set_ylabel('Перемещение: X  m.', fontsize=20)
+ax1.set_ylabel(Y1_tags, fontsize=20)
 ax1.tick_params(axis='y', rotation=0)
 
-plt.legend(tags)
+ax1.legend(tags)
 
 for data in datas :
     ax2.plot(data[X_tag], data[Y2_tags])
 
-ax2.set_ylabel("Управление", fontsize=20)
+ax2.set_ylabel(Y2_tags, fontsize=20)
 
 ax2.tick_params(axis='y')
 
-plt.legend(tags)
+ax2.legend(tags)
 
 
 for data in datas :
     ax3.plot(data[X_tag], data[Y3_tags])
 
-ax3.set_ylabel('Скорость: V  m/s.', fontsize=20)
+ax3.set_ylabel(Y3_tags, fontsize=20)
 
 ax3.tick_params(axis='y')
 
-plt.legend(tags)
+ax3.legend(tags)
 
 
 ax1.grid(alpha=.2)

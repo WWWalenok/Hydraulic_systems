@@ -10,11 +10,13 @@ void PrintHD(std::ofstream *fout, H_System &HD)
 
 }
 
-float maxTime = 5 * 1.000;
+float maxTime = 10 * 1.000;
 float dt = 0.001;
 
 float GetU(float T, int& j)
 {
+	return 1;
+
 	float TT = 0.5 * T;
 	int a = int(TT) % 4;
 	float b = TT - int(TT);
@@ -101,7 +103,6 @@ float GetU(float T, int& j)
 
 void Base(H_System& HD, std::string name)
 {
-	HD.Reset();
 	Forse_manipulator *force = dynamic_cast<Forse_manipulator *>(HD.force);
 	HD.solver.h = 1e-7;
 	float
@@ -134,8 +135,6 @@ void Base(H_System& HD, std::string name)
 	float I = 0, BI = 0;
 
 	double mh = HD.solver.h;
-	HD.solver.State[2] = 2;
-	HD.solver.State[1] = 0;
 
 	int medC = maxTime / HD.solver.h / 250;
 
@@ -396,6 +395,117 @@ void NonLinear(H_System& HD, std::string name)
 	Out.close();
 }
 
+void LinearStab(H_System& HD, std::string name)
+{
+	float
+		ot = -dt * 2;
+
+	float dt_solve = 1e-7;
+
+
+	float control = 1;
+
+	std::ofstream Out(name);
+	Out << std::scientific;
+	Out << std::setprecision(15);
+	Out
+		<< "T" << ","
+		<< "X" << ","
+		<< "V" << ","
+		<< "A" << ","
+		<< "P1" << ","
+		<< "P2" << ","
+		<< "DP1" << ","
+		<< "DP2" << ","
+		<< "U" << "\n";
+	int j = 0;
+
+	float I = 0, BI = 0;
+
+	std::cout << std::scientific;
+	std::cout << std::setprecision(2);
+	//HD.solver.State[2] = 0.5;
+
+
+	int medC = maxTime / dt_solve / 250;
+
+	double
+		v_r = HD.Get_V_r(),
+		T0 = sqrt(2 / HD.ro) * HD.mu * HD.S / v_r,
+		x0 = (HD.max_x - HD.min_x) * 0.5,
+		p1_r = HD.Get_P1_r(),
+		p2_r = HD.Get_P2_r()
+		;
+
+	double 
+		T = 0,
+		x = x0,
+		u = -v_r * 0.25,
+		v = v_r * 0.75,
+		a = 0,
+		y = 1,
+		p1 = p1_r,
+		p2 = p2_r,
+		w1 = 0,
+		w2 = 0,
+		dw1 = 0,
+		dw2 = 0;
+
+	for(int i = 0, j = 0, J = medC * 2, KK = 0; T <= maxTime; i++)
+	{
+		HD.U = GetU(T, j);
+		//HD.U = (HD.target_x - x) * HD.K_p;
+		HD.U = MAX2(-1, MIN2(1, HD.U));
+		if(T - ot >= dt)
+		{
+			while(T - ot >= dt)
+				ot += dt;
+			Out
+				<< T << ",\t"
+				<< x << ",\t"
+				<< v << ",\t"
+				<< a << ",\t"
+				<< p1 << ",\t"
+				<< p2 << ",\t"
+				<< dw1 << ",\t"
+				<< dw2 << ",\t"
+				<< y << "\n";
+			Out.flush();
+		}
+		if(J > medC)
+		{
+			for(int i = 0; i < 20; i++)
+				std::cout << (i / 19.0 > T / maxTime ? "_" : "X");
+			std::cout << dt_solve << ' ' << T << '\r';
+			J = 0;
+		}
+		//solve
+		{
+			double ndw1 = HD.S1 * HD.E / (HD.S1 * x0 + HD.V1) * (-abs(v_r) * T0 * T0 / (HD.S1 * HD.S1) - u);
+			double ndw2 = HD.S2 * HD.E / (HD.S2 * x0 + HD.V2) * (-abs(v_r) * T0 * T0 / (HD.S2 * HD.S2) + u);
+
+			w1 = w1 + dt_solve * (ndw1 + dw1) * 0.5;
+			w2 = w2 + dt_solve * (ndw2 + dw2) * 0.5;
+
+			double na = (w1 * HD.S1 - w2 * HD.S2 - u * HD.b) / HD.m;
+			u = u + dt_solve * (na  + a) * 0.5;
+
+			x = x0;
+			v = u + v_r;
+			a = na;
+			p1 = p1_r + w1;
+			p2 = p2_r + w2;
+
+			T += dt_solve;
+
+		}
+		J++;
+	}
+	std::cout << '\n';
+	Out.flush();
+	Out.close();
+}
+
 
 
 void main()
@@ -411,10 +521,28 @@ void main()
 
 	HD.target_x = 1;
 
+	if(1)
 	{
 		std::strstream temp;
 
-		temp << std::scientific << std::setprecision(3)<< "real" << '\0';
+		temp << std::scientific << std::setprecision(3)<< "stab" << '\0';
+
+		std::string fname = "out_" + std::string(temp.str()) + ".csv";
+
+		temp.freeze(false);
+
+		LinearStab(HD, fname);
+		//HD.E *= powf(10, -1.0);
+		fnames += " \"" + std::string(temp.str()) + "\"";
+	}
+	if(1)
+	{
+		HD.solver.State[2] = 2;
+		HD.solver.State[1] = HD.Get_V_r() * 0.75;
+		HD.Reset(0, HD.Get_V_r() * 0.75, 2, HD.Get_P1_r(), HD.Get_P2_r(), 1);
+		std::strstream temp;
+
+		temp << std::scientific << std::setprecision(3)<< "real_stab" << '\0';
 
 		std::string fname = "out_" + std::string(temp.str()) + ".csv";
 
@@ -425,11 +553,14 @@ void main()
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}
 
-	if(1)
+
+
+
+	if(0)
 	{
 		std::strstream temp;
 
-		temp << std::scientific << std::setprecision(3)<< "linear_1" << '\0';
+		temp << std::scientific << std::setprecision(3)<< "linear 1" << '\0';
 
 		std::string fname = "out_" + std::string(temp.str()) + ".csv";
 
@@ -440,11 +571,11 @@ void main()
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}
 
-	if(1)
+	if(0)
 	{
 		std::strstream temp;
 
-		temp << std::scientific << std::setprecision(3)<< "linear_2" << '\0';
+		temp << std::scientific << std::setprecision(3)<< "linear 2" << '\0';
 
 		std::string fname = "out_" + std::string(temp.str()) + ".csv";
 
@@ -465,7 +596,7 @@ void main()
 
 		temp.freeze(false);
 
-		//NonLinear(HD, fname);
+		NonLinear(HD, fname);
 		//HD.E *= powf(10, -1.0);
 		fnames += " \"" + std::string(temp.str()) + "\"";
 	}

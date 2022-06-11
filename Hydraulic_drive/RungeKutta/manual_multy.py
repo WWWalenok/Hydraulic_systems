@@ -1,5 +1,3 @@
-print("Hi")
-
 
 import numpy as np
 import pandas as pd
@@ -10,21 +8,24 @@ import warnings
 import math
 
 warnings.filterwarnings(action='once')
+out_name = 'example_all'
 
-data = np.genfromtxt(
-    "out_real.csv",
-    delimiter=',',
-    skip_header=0,
-    names=True
-)
-
-print(data)
+names = ['real', 'non linear', 'linear 2', 'linear 1']
+datas = []
+for name in names:
+    datas.append(np.genfromtxt(
+        "out_" + name + ".csv",
+        delimiter=',',
+        skip_header=0,
+        names=True
+    ))
+names = ['diff model', 'non linear model', 'linear 8.2', 'linear 8.3']
 
 
 large = 20; med = 14; small = 12
 params = {'axes.titlesize': large,
           'legend.fontsize': med,
-          'figure.figsize': (12, 10),
+          'figure.figsize': (12, 8),
           'axes.labelsize': med,
           'axes.titlesize': med,
           'xtick.labelsize': med,
@@ -39,46 +40,49 @@ sns.set_style("white")
 # Import Data
 
 X_tag = 'T'
-Ys_tags = [['QI', 'QS'], ['Q1', 'Q2'], ['U', 'Y']]
-Zs_tags = [[], [], ['V']]
+Ys_tags = [['V'],['X'],[],[],[],[],[]]
+Zs_tags = [[],[],[],[],[],[],[],[]]
 axs = []
 
 # Plot Line1 (Left Y Axis)
 
-axs.append(plt.subplot(311))
-axs.append(plt.subplot(312))
-axs.append(plt.subplot(313))
-
+axs.append(plt.subplot(211))
+axs.append(plt.subplot(212))
+#axs.append(plt.subplot(313))
 for i in range(len(axs)):
-    ax = axs[i]
-    Y_tags = Ys_tags[i]
-    Z_tags = Zs_tags[i]
-
+    tags = []
     lines = []
+    for j in range(len(datas)):
+        data = datas[j]
+        name = names[j]
+        ax = axs[i]
+        Y_tags = Ys_tags[i]
+        Z_tags = Zs_tags[i]
 
-
-    for Y_tag in Y_tags:
-        line, = ax.plot(data[X_tag], data[Y_tag], label=Y_tag)
-        lines.append(line)
-
-    ax.set_xlabel(X_tag, fontsize=20)
-    ax.tick_params(axis='x', rotation=0, labelsize=12)
-    ax.set_ylabel(Y_tags, color='tab:blue', fontsize=20)
-    ax.tick_params(axis='y', rotation=0, labelcolor='tab:blue' )
-    ax.grid(alpha=.2)
-
-    tags = Y_tags
-
-    if len(Z_tags) > 0:
-        axZ = ax.twinx()
-        axZ.set_ylabel(Z_tags, color='tab:blue', fontsize=20)
-        for Z_tag in Z_tags:
-            line, = axZ.plot(data[X_tag], data[Z_tag], color = 'C{a}'.format(a = len(Y_tags)), label=Z_tag)
+        for Y_tag in Y_tags:
+            line, = ax.plot(data[X_tag], data[Y_tag], label=Y_tag, color = 'C{a}'.format(a = len(lines)))
             lines.append(line)
+            tags.append(name + ": " + Y_tag)
 
-    ax.legend(handles = lines, labels = Y_tags + Z_tags)
+        ax.set_xlabel(X_tag, fontsize=20)
+        ax.tick_params(axis='x', rotation=0, labelsize=12)
+        ax.set_ylabel(Y_tags, fontsize=20)
+        ax.tick_params(axis='y', rotation=0)
+        ax.grid(alpha=.2)
+
+        if len(Z_tags) > 0:
+            axZ = ax.twinx()
+            axZ.set_ylabel(Z_tags, color='tab:blue', fontsize=20)
+            for Z_tag in Z_tags:
+                line, = axZ.plot(data[X_tag], data[Z_tag], color = 'C{a}'.format(a = len(lines)), label=Z_tag)
+                lines.append(line)
+                tags.append(name + ": " + Z_tag)
+
+    ax.legend(handles = lines, labels = tags)
 
 plt.tight_layout()
+
+plt.savefig("E:\\Repos\\Latex\\rsgc_1\\" + out_name + ".png", format = "png")
 
 plt.show()
 
